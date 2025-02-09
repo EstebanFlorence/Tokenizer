@@ -5,6 +5,7 @@ const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helper
 describe("Tokenizer", function ()
 {
 	let tokenizer;
+	let vrfConsumer;
 	let owner;
 	let user1;
 	let user2;
@@ -31,17 +32,23 @@ describe("Tokenizer", function ()
 		// Fund the subscription
 		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 
+		// Deploy VRFConsumer
+		const VRFConsumer = await ethers.getContractFactory("VRFConsumer");
+		vrfConsumer = await VRFConsumer.deploy(
+			await mockVRFCoordinator.getAddress(),
+			subscriptionId,
+			keyHash
+		);
+
 		// Deploy Tokenizer
 		const Tokenizer = await ethers.getContractFactory("Tokenizer");
 		tokenizer = await Tokenizer.deploy(
 			initialSupply,
-			subscriptionId,
-			await mockVRFCoordinator.getAddress(),
-			keyHash
+			await vrfConsumer.getAddress()
 		);
 
 		// Add consumer to VRF
-		await mockVRFCoordinator.addConsumer(subscriptionId, await tokenizer.getAddress());
+		await mockVRFCoordinator.addConsumer(subscriptionId, await tokenizer.vrfConsumer());
 
 		return { tokenizer, mockVRFCoordinator, owner, user1, user2, subscriptionId };
 	}
@@ -76,37 +83,36 @@ describe("Tokenizer", function ()
 		});
 	});
 
-	describe("Quantum Events", function () {
-		it("Should trigger quantum event", async function () {
+	describe("Random Events", function () {
+		it("Should trigger random event", async function () {
 			const { tokenizer, owner } = await loadFixture(deployTokenizerFixture);
+
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]); // +1 day
 			await ethers.provider.send("evm_mine"); // Mine a new block
-			await expect(tokenizer.triggerQuantumEvent())
-				.to.emit(tokenizer, "QuantumEventTriggered")
+			await expect(tokenizer.triggerRandomEvent())
+				.to.emit(tokenizer, "RandomEventTriggered")
 				// .withArgs(expect.anyValue, owner.address);
 		});
 
-		it("Should not allow quantum event before interval", async function () {
+		it("Should not allow random event before interval", async function () {
 			const { tokenizer } = await loadFixture(deployTokenizerFixture);
-			// await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-			// await ethers.provider.send("evm_mine");
-			// await tokenizer.triggerQuantumEvent();
-			await expect(tokenizer.triggerQuantumEvent())
-				.to.be.revertedWith("too soon for a quantum event");
+
+			await expect(tokenizer.triggerRandomEvent())
+				.to.be.revertedWith("Too soon for a random event");
 		});
 
 		it("Should process random words and mint tokens on even number", async function () {
 			const { tokenizer, mockVRFCoordinator, owner } = await loadFixture(deployTokenizerFixture);
 			
-			// Trigger quantum event
+			// Trigger random event
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.triggerQuantumEvent();
+			const tx = await tokenizer.triggerRandomEvent();
 			const receipt = await tx.wait();
 			
-			// Find the QuantumEventTriggered event
+			// Find the RandomEventTriggered event
 			const event = receipt.logs.find(
-				log => log.fragment && log.fragment.name === 'QuantumEventTriggered'
+				log => log.fragment && log.fragment.name === 'RandomEventTriggered'
 			);
 			const [requestId] = event.args;
 
@@ -116,30 +122,28 @@ describe("Tokenizer", function ()
 			// Mock VRF response with even number (will trigger mint)
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
-				await tokenizer.getAddress(),
+				await vrfConsumer.getAddress(),
 				[2]
 			);
+			await tokenizer.handleRandomness(requestId);
 
 			// Verify balance increased
 			const finalBalance = await tokenizer.balanceOf(owner.address);
 			console.log("Initial Balance:", initialBalance.toString());
-			console.log("Final Balance:", finalBalance.toString());			
+			console.log("Final Balance:\t", finalBalance.toString());			
 			expect(finalBalance).to.be.greaterThan(initialBalance);
 		});
 
 		it("Should process random words and burn tokens on odd number", async function () {
 			const { tokenizer, mockVRFCoordinator, owner } = await loadFixture(deployTokenizerFixture);
 			
-			// Give mock ability to return specific numbers (if supported)
-			// Note: You might need to modify this based on the specific VRFCoordinatorV2Mock implementation
-			
-			// Trigger quantum event
+			// Trigger random event
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.triggerQuantumEvent();
+			const tx = await tokenizer.triggerRandomEvent();
 			const receipt = await tx.wait();
 			const event = receipt.logs.find(
-				log => log.fragment && log.fragment.name === 'QuantumEventTriggered'
+				log => log.fragment && log.fragment.name === 'RandomEventTriggered'
 			);
 			const [requestId] = event.args;
 
@@ -149,50 +153,16 @@ describe("Tokenizer", function ()
 			// Mock VRF response
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
-				await tokenizer.getAddress(),
+				await vrfConsumer.getAddress(),
 				[1]
 			);
+			await tokenizer.handleRandomness(requestId);
+
 			// Verify balance changed
 			const finalBalance = await tokenizer.balanceOf(owner.address);
 			console.log("Initial Balance:", initialBalance.toString());
-			console.log("Final Balance:", finalBalance.toString());
+			console.log("Final Balance:\t", finalBalance.toString());
 			expect(finalBalance).to.lessThan(initialBalance);
 		});
 	});
 });
-
-/* 
-describe("Tokenizer", function () {
-	let Tokenizer, tokenizer, owner, addr1, addr2;
-
-	beforeEach(async function () {
-
-		// Set up ethers contract, representing deployed Tokenizer instance
-		Tokenizer = await ethers.getContractFactory("Tokenizer");
-
-		// Retrieve accounts from the local node
-		[owner, addr1, addr2, _] = await ethers.getSigners();
-		
-		tokenizer = await Tokenizer.deploy(ethers.parseUnits('1000', 18));
-		// await tokenizer.deployed();
-	});
-
-	it("Should assign the initial supply to the owner", async function () {
-		const ownerBalance = await tokenizer.balanceOf(owner.address);
-		expect(await tokenizer.totalSupply()).to.equal(ownerBalance);
-	});
-
-	it("Should allow the owner to mint tokens", async function () {
-		await tokenizer.mint(addr1.address, ethers.parseUnits('500', 18));
-		const addr1Balance = await tokenizer.balanceOf(addr1.address);
-		expect(addr1Balance).to.equal(ethers.parseUnits('500', 18));
-	});
-
-	it("Should not allow non-owners to mint tokens", async function () {
-		await expect(
-			tokenizer.connect(addr1).mint(addr2.address, ethers.parseUnits('500', 18))
-		).to.be.reverted//With("Ownable: caller is not the owner");
-	});
-
-})
- */

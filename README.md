@@ -18,6 +18,9 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install --save-dev @nomicfoundation/hardhat-ethers ethers
 - npx hardhat init [empty hardhat.config.js]
 
+- npm install @chainlink/contracts --save
+- https://docs.chain.link/vrf/v2/subscription/examples/test-locally
+
 ## Setup
 - npx hardhat node
 - npx hardhat run --network localhost scripts/deploy.js
@@ -26,4 +29,20 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install --save-dev @nomicfoundation/hardhat-toolbox
 - npm install --save-dev @openzeppelin/test-helpers
 - npx hardhat console --network localhost
-- npx hardhat test (test/Tokenizer.test.js)
+- npx hardhat test (--network localhost) [test/Tokenizer.test.js]
+
+# Smart Contract
+
+## Chainlink Verifiable Randomness Function
+- https://vrf.chain.link/
+- https://docs.chain.link/vrf/v2/subscription/examples/get-a-random-number
+
+User calls Tokenizer.triggerRandomEvent()
+⬇ Calls
+VRFConsumer.requestRandomness() (requests randomness from Chainlink)
+⬇ Calls
+Chainlink VRF processes and calls VRFConsumer.fulfillRandomWords()
+⬇ Stores randomness
+Tokenizer fetches randomness using vrfConsumer.getRandomness(requestId)
+
+
