@@ -31,7 +31,12 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npx hardhat console --network localhost
 - npx hardhat test (--network localhost) [test/Tokenizer.test.js]
 
+## Deploy
+- npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
+
+
 # Smart Contract
+0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
 
 ## Chainlink Verifiable Randomness Function
 - https://vrf.chain.link/

@@ -53,13 +53,23 @@ contract VRFConsumer is VRFConsumerBaseV2
 		emit RandomnessFulfilled(requestId, randomness);
 	}
 
-	function getRandomness(uint256 requestId) external returns (uint256 randomness)
+	function getRandomness(uint256 requestId) external view returns (uint256)
 	{
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
-		randomness = requestIdToRandomness[requestId];
+
+		uint256	randomness = requestIdToRandomness[requestId];
+		// delete requestIdToSender[requestId];
+		// delete requestIdToRandomness[requestId];
+		// delete requestIdToSender[requestId];
+
+		return randomness;
+	}
+
+	function clearRandomRequest(uint256 requestId) external
+	{
 		delete requestIdToSender[requestId];
 		delete requestIdToRandomness[requestId];
-		return randomness;
+		delete requestIdToSender[requestId];
 	}
 
 }

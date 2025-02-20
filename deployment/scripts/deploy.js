@@ -46,7 +46,6 @@ async function main ()
 
 	// Add Tokenizer as a VRF consumer
 	await mockVRFCoordinator.addConsumer(subscriptionId, await vrfConsumer.getAddress());
-	console.log(await vrfConsumer.getAddress());
 	console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
 }
 

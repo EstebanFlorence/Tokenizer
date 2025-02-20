@@ -6,6 +6,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 	let owner;
 	let user1;
 	let user2;
+	let vrfConsumer;
 	let mockVRFCoordinator;
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
@@ -15,11 +16,31 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		// Get contract instances
 		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
 		const vrfConsumerAddress = await tokenizer.vrfConsumer();
-		console.log(vrfConsumerAddress);
 		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
 		const vrfCoordinatorAddress = await vrfConsumer.coordinator();
-		console.log(vrfCoordinatorAddress);
 		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2Mock", vrfCoordinatorAddress);
+
+		// Create VRF Subscription
+		const tx = await mockVRFCoordinator.createSubscription();
+		const receipt = await tx.wait();
+		const subscriptionId = receipt.logs[0].args[0];
+		console.log(subscriptionId);
+
+		// Fund the subscription if needed
+		try {
+			await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
+			console.log("Funded VRF subscription");
+		} catch (error) {
+			console.log("Subscription might already be funded:", error.message);
+		}
+
+		// Add consumer if needed
+		try {
+			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
+			console.log("Added consumer to VRF subscription");
+		} catch (error) {
+			console.log("Consumer might already be registered:", error.message);
+		}
 	});
 
 	it("Should connect to deployed contract", async function () {
@@ -48,9 +69,14 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		const [requestId] = event.args;
 
 		const initialBalance = await tokenizer.balanceOf(owner.address);
-
+		console.log(initialBalance);
+		console.log(requestId);
 		// Mock VRF response (even number → mint)
-		await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [2]);
+		await mockVRFCoordinator.fulfillRandomWordsWithOverride(
+			requestId,
+			await vrfConsumer.getAddress(),
+			[2]
+		);
 		await tokenizer.handleRandomness(requestId);
 
 		const finalBalance = await tokenizer.balanceOf(owner.address);

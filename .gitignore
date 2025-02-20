@@ -1,5 +1,7 @@
 artifacts
 cache
 node_modules
+.secrets.json
+.env
 TODO.md
 **/.DS_Store

@@ -5,10 +5,10 @@ const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helper
 describe("Tokenizer", function ()
 {
 	let tokenizer;
-	let vrfConsumer;
 	let owner;
 	let user1;
 	let user2;
+	let vrfConsumer;
 	let mockVRFCoordinator;
 	const keyHash = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
 	const subscriptionId = 1234;
