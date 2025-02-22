@@ -43,69 +43,96 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		}
 	});
 
-	it("Should connect to deployed contract", async function () {
-		expect(await tokenizer.owner()).to.equal(owner.address);
+	describe("Deployment", function () {
+		it("Should connect to deployed contract", async function () {
+			expect(await tokenizer.owner()).to.equal(owner.address);
+		});
 	});
 
-	it("Should trigger random event", async function () {
-		await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-		await ethers.provider.send("evm_mine");
-		await expect(tokenizer.triggerRandomEvent()).to.emit(tokenizer, "RandomEventTriggered");
+	describe("Minting", function () {
+		it("Should allow owner to mint tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+			const initialBalance = await tokenizer.balanceOf(user1.address);
+			await tokenizer.mint(user1.address, mintAmount);
+			const expectedBalance = initialBalance + mintAmount;
+			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
+		});
+		it("Should not allow non-owner to mint tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+			await expect(
+				tokenizer.connect(user1).mint(user1.address, mintAmount)
+			).to.be.revertedWith("Ownable: caller is not the owner");
+		});
 	});
 
-	it("Should not allow random event before interval", async function () {
-		await expect(tokenizer.triggerRandomEvent()).to.be.revertedWith("Too soon for a random event");
+	describe("Random Events", function () {
+		it("Should trigger random event", async function () {
+			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
+			await ethers.provider.send("evm_mine");
+			await expect(tokenizer.triggerRandomEvent()).to.emit(tokenizer, "RandomEventTriggered");
+		});
+
+		it("Should not allow random event before interval", async function () {
+			await expect(tokenizer.triggerRandomEvent()).to.be.revertedWith("Too soon for a random event");
+		});
+
+		it("Should process random words and mint tokens on even number", async function () {
+			// Trigger random event
+			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
+			await ethers.provider.send("evm_mine");
+			const tx = await tokenizer.triggerRandomEvent();
+			const receipt = await tx.wait();
+
+			// Find the RandomEventTriggered event
+			const event = receipt.logs.find(
+				(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
+			);
+			const [requestId] = event.args;
+
+			// Get initial balance
+			const initialBalance = await tokenizer.balanceOf(owner.address);
+			console.log("request ID: " + requestId);
+
+			// Mock VRF response (even number → mint)
+			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
+				requestId,
+				await vrfConsumer.getAddress(),
+				[2]
+			);
+			await tokenizer.handleRandomness(requestId);
+
+			// Verify balance increased
+			const finalBalance = await tokenizer.balanceOf(owner.address);
+			console.log("Initial Balance:", initialBalance.toString());
+			console.log("Final Balance:\t", finalBalance.toString());
+			expect(finalBalance).to.be.greaterThan(initialBalance);
+		});
+
+		it("Should process random words and burn tokens on odd number", async function () {
+			// Trigger event
+			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
+			await ethers.provider.send("evm_mine");
+			const tx = await tokenizer.triggerRandomEvent();
+			const receipt = await tx.wait();
+
+			// Find the RandomEventTriggered event
+			const event = receipt.logs.find(
+				(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
+			);
+			const [requestId] = event.args;
+
+			// Get initial balance
+			const initialBalance = await tokenizer.balanceOf(owner.address);
+
+			// Mock VRF response (odd number → burn)
+			await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [1]);
+			await tokenizer.handleRandomness(requestId);
+
+			// Verify balance changed
+			const finalBalance = await tokenizer.balanceOf(owner.address);
+			console.log("Initial Balance:", initialBalance.toString());
+			console.log("Final Balance:\t", finalBalance.toString());
+			expect(finalBalance).to.be.lessThan(initialBalance);
+		});
 	});
-
-	it("Should process random words and mint tokens", async function () {
-		// Trigger event
-		await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-		await ethers.provider.send("evm_mine");
-		const tx = await tokenizer.triggerRandomEvent();
-		const receipt = await tx.wait();
-		const event = receipt.logs.find(
-			(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
-		);
-		const [requestId] = event.args;
-
-		const initialBalance = await tokenizer.balanceOf(owner.address);
-		console.log(initialBalance);
-		console.log(requestId);
-		// Mock VRF response (even number → mint)
-		await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-			requestId,
-			await vrfConsumer.getAddress(),
-			[2]
-		);
-		await tokenizer.handleRandomness(requestId);
-
-		const finalBalance = await tokenizer.balanceOf(owner.address);
-		console.log("Initial Balance:", initialBalance.toString());
-		console.log("Final Balance:\t", finalBalance.toString());
-		expect(finalBalance).to.be.greaterThan(initialBalance);
-	});
-
-	it("Should process random words and burn tokens", async function () {
-		// Trigger event
-		await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-		await ethers.provider.send("evm_mine");
-		const tx = await tokenizer.triggerRandomEvent();
-		const receipt = await tx.wait();
-		const event = receipt.logs.find(
-			(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
-		);
-		const [requestId] = event.args;
-
-		const initialBalance = await tokenizer.balanceOf(owner.address);
-
-		// Mock VRF response (even number → mint)
-		await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [1]);
-		await tokenizer.handleRandomness(requestId);
-
-		const finalBalance = await tokenizer.balanceOf(owner.address);
-		console.log("Initial Balance:", initialBalance.toString());
-		console.log("Final Balance:\t", finalBalance.toString());
-		expect(finalBalance).to.be.lessThan(initialBalance);
-	});
-
 });

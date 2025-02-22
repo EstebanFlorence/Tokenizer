@@ -69,7 +69,6 @@ contract VRFConsumer is VRFConsumerBaseV2
 	{
 		delete requestIdToSender[requestId];
 		delete requestIdToRandomness[requestId];
-		delete requestIdToSender[requestId];
 	}
 
 }

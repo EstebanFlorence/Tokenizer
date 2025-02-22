@@ -73,7 +73,7 @@ contract Tokenizer is ERC20, Ownable
 
 	function handleRandomness(uint256 requestId) external
 	{
-		// require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
+		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
 		uint256 randomness = vrfConsumer.getRandomness(requestId);
 		require(randomness != 0, "Randomness not available");
 

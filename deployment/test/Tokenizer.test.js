@@ -118,6 +118,7 @@ describe("Tokenizer", function ()
 
 			// Get initial balance
 			const initialBalance = await tokenizer.balanceOf(owner.address);
+			console.log("request ID: " + requestId);
 
 			// Mock VRF response with even number (will trigger mint)
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
@@ -142,6 +143,8 @@ describe("Tokenizer", function ()
 			await ethers.provider.send("evm_mine");
 			const tx = await tokenizer.triggerRandomEvent();
 			const receipt = await tx.wait();
+
+			// Find the RandomEventTriggered event
 			const event = receipt.logs.find(
 				log => log.fragment && log.fragment.name === 'RandomEventTriggered'
 			);
