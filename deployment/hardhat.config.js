@@ -11,6 +11,15 @@ module.exports = {
 	solidity : {
 		compilers: [
 			{
+				version: "0.8.19",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs:200
+					}
+				}
+			},
+			{
 				version: "0.8.20",
 				settings: {
 					optimizer: {
@@ -30,7 +39,7 @@ module.exports = {
 			}
 		]
 	},
-	// defaultNetwork: "sepolia",
+	defaultNetwork: "sepolia",
 	networks: {
 		hardhat: {
 		  chainId: 31337,  // Default Hardhat chain ID
@@ -39,11 +48,11 @@ module.exports = {
 			url: "http://127.0.0.1:8545",
 			chainId: 31337,  // Same chain ID for local node
 		},
-/* 		sepolia: {
-			url: API_URL,
+		sepolia: {
+			url: "https://eth-sepolia.g.alchemy.com/v2/" + API_URL,
 			accounts: [`0x${PRIVATE_KEY}`]
 			// url: process.env.SEPOLIA_RPC_URL,
 			// accounts: [process.env.PRIVATE_KEY], 
-		} */
+		}
 	},
 };

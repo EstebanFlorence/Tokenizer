@@ -17,12 +17,13 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
 		const vrfConsumerAddress = await tokenizer.vrfConsumer();
 		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
-		const vrfCoordinatorAddress = await vrfConsumer.coordinator();
-		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2Mock", vrfCoordinatorAddress);
+		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
+		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
+		console.log(receipt);
 		const subscriptionId = receipt.logs[0].args[0];
 		console.log(subscriptionId);
 

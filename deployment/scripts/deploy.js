@@ -5,9 +5,9 @@ async function main ()
 	const [deployer] = await ethers.getSigners();
 	console.log("Deploying contract with the account:", deployer.address);
 
-	// Deploy VRFCoordinatorV2Mock (for testing)
-	const VRFCoordinatorV2Mock = await ethers.getContractFactory("VRFCoordinatorV2Mock");
-	const mockVRFCoordinator = await VRFCoordinatorV2Mock.deploy(100000, 1e9);
+	// Deploy VRFCoordinatorV2_5Mock (for testing)
+	const VRFCoordinatorV2_5Mock = await ethers.getContractFactory("VRFCoordinatorV2_5Mock");
+	const mockVRFCoordinator = await VRFCoordinatorV2_5Mock.deploy(100000, 1e9, 6110300000000000);
 
 	await mockVRFCoordinator.waitForDeployment();
 	console.log("Mock VRFCoordinator deployed at:", await mockVRFCoordinator.getAddress());
@@ -31,7 +31,7 @@ async function main ()
 
 	await vrfConsumer.waitForDeployment();
 	console.log('vrfConsumer deployed at:', await vrfConsumer.getAddress());
-	console.log('vrfConsumer\'s coordinator address:', await vrfConsumer.coordinator());
+	console.log('vrfConsumer\'s coordinator address:', await vrfConsumer.s_vrfCoordinator());
 
 	// Deploy Tokenizer contract
 	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens

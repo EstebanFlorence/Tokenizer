@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.6;
 
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFCoordinatorV2.sol";
-import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
+// import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+// import "@chainlink/contracts/src/v0.8/vrf/VRFCoordinatorV2.sol";
+// import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 
-// CasinOracle
-contract VRFConsumer is VRFConsumerBaseV2
+import "@chainlink/contracts/src/v0.8/vrf/dev/VRFCoordinatorV2_5.sol";
+import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+
+contract VRFConsumer is VRFConsumerBaseV2Plus
 {
-	VRFCoordinatorV2Interface public immutable	coordinator;
-	uint64 public immutable		subscriptionId;
+	// VRFCoordinatorV2Interface public immutable	coordinator;
+	uint256 public immutable	subscriptionId;
 	bytes32	public immutable	keyHash;
 	uint32 public immutable		callbackGasLimit = 100000;
 	uint16 public immutable		requestConfirmations = 3;
+	uint16 public immutable		numWords = 1;
 
 	mapping(uint256 => address) public	requestIdToSender;
 	mapping(uint256 => uint256) public	requestIdToRandomness;
@@ -22,30 +27,34 @@ contract VRFConsumer is VRFConsumerBaseV2
 
 	constructor(
 		address _vrfCoordinator,
-		uint64 _subscriptionId, 
+		uint256 _subscriptionId, 
 		bytes32 _keyHash
 	)
-	VRFConsumerBaseV2(_vrfCoordinator)
+	VRFConsumerBaseV2Plus(_vrfCoordinator)
 	{
-		coordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
 		subscriptionId = _subscriptionId;
 		keyHash = _keyHash;
 	}
 
 	function requestRandomness() external returns (uint256 requestId)
 	{
-		requestId = coordinator.requestRandomWords(
-			keyHash,
-			subscriptionId,
-			requestConfirmations,
-			callbackGasLimit,
-			1
+		requestId = s_vrfCoordinator.requestRandomWords(
+			VRFV2PlusClient.RandomWordsRequest({
+				keyHash: keyHash,
+				subId: subscriptionId,
+				requestConfirmations: requestConfirmations,
+				callbackGasLimit: callbackGasLimit,
+				numWords: numWords,
+				extraArgs: VRFV2PlusClient._argsToBytes(
+					VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+				)
+			})
 		);
 		requestIdToSender[requestId] = msg.sender;
 		emit RandomnessRequested(requestId, msg.sender);
 	}
 
-	function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override
+	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override
 	{
 		uint256 randomness = randomWords[0];
 		requestIdToRandomness[requestId] = randomness;
@@ -58,9 +67,6 @@ contract VRFConsumer is VRFConsumerBaseV2
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
 		uint256	randomness = requestIdToRandomness[requestId];
-		// delete requestIdToSender[requestId];
-		// delete requestIdToRandomness[requestId];
-		// delete requestIdToSender[requestId];
 
 		return randomness;
 	}

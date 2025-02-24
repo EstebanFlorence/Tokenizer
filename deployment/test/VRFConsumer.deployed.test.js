@@ -1,57 +1,48 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
-const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
 describe("VRFConsumer", function () {
 	let vrfConsumer;
 	let mockVRFCoordinator;
 	let owner;
 	let user1;
-	const keyHash = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
-	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
+	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
-	async function deployTokenizerFixture()
-	{
-		// Get signers
-		[owner, user1, user2] = await ethers.getSigners();
+	before(async function () {
+		[owner, user1] = await ethers.getSigners();
 
-		// Deploy VRF Coordinator Mock
-		const VRFCoordinatorV2_5Mock = await ethers.getContractFactory("VRFCoordinatorV2_5Mock");
-		// Constructor params: baseFee and gasPriceLink
-		mockVRFCoordinator = await VRFCoordinatorV2_5Mock.deploy(100000, 1e9, 6110300000000000);
+		// Get contract instances
+		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
+		const vrfConsumerAddress = await tokenizer.vrfConsumer();
+		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
+		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
+		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
 		const subscriptionId = receipt.logs[0].args[0];
+		console.log(subscriptionId);
 
-		// Fund the subscription
-		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
+		// Fund the subscription if needed
+		try {
+			await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
+			console.log("Funded VRF subscription");
+		} catch (error) {
+			console.log("Subscription might already be funded:", error.message);
+		}
 
-		// Deploy VRFConsumer
-		const VRFConsumer = await ethers.getContractFactory("VRFConsumer");
-		vrfConsumer = await VRFConsumer.deploy(
-			await mockVRFCoordinator.getAddress(),
-			subscriptionId,
-			keyHash
-		);
-
-		// Deploy Tokenizer
-		const Tokenizer = await ethers.getContractFactory("Tokenizer");
-		tokenizer = await Tokenizer.deploy(
-			initialSupply,
-			await vrfConsumer.getAddress()
-		);
-
-		// Add consumer to VRF
-		await mockVRFCoordinator.addConsumer(subscriptionId, await tokenizer.vrfConsumer());
-
-		return { vrfConsumer, mockVRFCoordinator, owner, user1, user2, subscriptionId };
-	}
+		// Add consumer if needed
+		try {
+			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
+			console.log("Added consumer to VRF subscription");
+		} catch (error) {
+			console.log("Consumer might already be registered:", error.message);
+		}
+	});
 
 	describe("requestRandomness", function () {
 		it("Should request randomness and emit event", async function () {
-			const { vrfConsumer, owner } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -69,7 +60,6 @@ describe("VRFConsumer", function () {
 
 	describe("fulfillRandomWords", function () {
 		it("Should fulfill randomness and emit event", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -92,7 +82,6 @@ describe("VRFConsumer", function () {
 
 	describe("getRandomness", function () {
 		it("Should return the correct randomness for the requester", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -114,7 +103,6 @@ describe("VRFConsumer", function () {
 		});
 
 		it("Should revert if called by non-requester", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -137,7 +125,6 @@ describe("VRFConsumer", function () {
 
 	describe("clearRandomRequest", function () {
 		it("Should clear the request data", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 

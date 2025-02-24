@@ -36,11 +36,14 @@ Explain the choices you had to make and the reasons why you made these choices.
 
 
 # Smart Contract
-0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
+Address: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
+Contract: 
 
 ## Chainlink Verifiable Randomness Function
 - https://vrf.chain.link/
 - https://docs.chain.link/vrf/v2/subscription/examples/get-a-random-number
+- https://docs.chain.link/vrf/v2/subscription/supported-networks
+- https://docs.chain.link/vrf/v2-5/supported-networks
 
 User calls Tokenizer.triggerRandomEvent()
 ⬇ Calls

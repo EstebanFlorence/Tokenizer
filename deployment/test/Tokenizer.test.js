@@ -11,7 +11,6 @@ describe("Tokenizer", function ()
 	let vrfConsumer;
 	let mockVRFCoordinator;
 	const keyHash = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
-	const subscriptionId = 1234;
 	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
 
 	async function deployTokenizerFixture()
@@ -20,9 +19,9 @@ describe("Tokenizer", function ()
 		[owner, user1, user2] = await ethers.getSigners();
 
 		// Deploy VRF Coordinator Mock
-		const VRFCoordinatorV2Mock = await ethers.getContractFactory("VRFCoordinatorV2Mock");
+		const VRFCoordinatorV2_5Mock = await ethers.getContractFactory("VRFCoordinatorV2_5Mock");
 		// Constructor params: baseFee and gasPriceLink
-		mockVRFCoordinator = await VRFCoordinatorV2Mock.deploy(100000, 1e9);
+		mockVRFCoordinator = await VRFCoordinatorV2_5Mock.deploy(100000, 1e9, 6110300000000000);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
