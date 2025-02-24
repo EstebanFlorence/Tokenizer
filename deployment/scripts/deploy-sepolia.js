@@ -33,7 +33,7 @@ async function main ()
 	console.log('Tokenizer deployed at:', await tokenizer.getAddress());
 
 	// Add Tokenizer as a VRF consumer
-	const VRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2Interface", VRF_COORDINATOR_ADDRESS);
+	const VRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5", VRF_COORDINATOR_ADDRESS);
 	await VRFCoordinator.addConsumer(subscriptionId, await vrfConsumer.getAddress());
 	console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
 }

@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-describe("VRFConsumer", function () {
+describe("VRFConsumer (Using Deployed Contract)", function () {
 	let vrfConsumer;
 	let mockVRFCoordinator;
 	let owner;

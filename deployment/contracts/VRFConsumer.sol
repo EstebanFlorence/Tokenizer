@@ -19,8 +19,8 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 	uint16 public immutable		requestConfirmations = 3;
 	uint16 public immutable		numWords = 1;
 
-	mapping(uint256 => address) public	requestIdToSender;
-	mapping(uint256 => uint256) public	requestIdToRandomness;
+	mapping(uint256 => address) public	requestIdToRoller;
+	mapping(uint256 => uint256) public	rollerToResult;
 
 	event RandomnessRequested(uint256 requestId, address requester);
 	event RandomnessFulfilled(uint256 requestId, uint256 randomness);
@@ -50,31 +50,31 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 				)
 			})
 		);
-		requestIdToSender[requestId] = msg.sender;
+		requestIdToRoller[requestId] = msg.sender;
 		emit RandomnessRequested(requestId, msg.sender);
 	}
 
 	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override
 	{
 		uint256 randomness = randomWords[0];
-		requestIdToRandomness[requestId] = randomness;
+		rollerToResult[requestId] = randomness;
 
 		emit RandomnessFulfilled(requestId, randomness);
 	}
 
 	function getRandomness(uint256 requestId) external view returns (uint256)
 	{
-		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
+		require(msg.sender == requestIdToRoller[requestId], "Caller is not the requester");
 
-		uint256	randomness = requestIdToRandomness[requestId];
+		uint256	randomness = rollerToResult[requestId];
 
 		return randomness;
 	}
 
 	function clearRandomRequest(uint256 requestId) external
 	{
-		delete requestIdToSender[requestId];
-		delete requestIdToRandomness[requestId];
+		delete requestIdToRoller[requestId];
+		delete rollerToResult[requestId];
 	}
 
 }

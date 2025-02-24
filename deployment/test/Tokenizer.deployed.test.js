@@ -23,7 +23,6 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
-		console.log(receipt);
 		const subscriptionId = receipt.logs[0].args[0];
 		console.log(subscriptionId);
 
