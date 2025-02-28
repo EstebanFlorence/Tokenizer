@@ -1,4 +1,6 @@
-/* npx hardhat console --network sepolia */
+/*
+	npx hardhat console --network sepolia / localhost
+*/
 
 // Balance
 const [deployer] = await ethers.getSigners();

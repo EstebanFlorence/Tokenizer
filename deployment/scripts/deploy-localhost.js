@@ -34,7 +34,7 @@ async function main ()
 	console.log('vrfConsumer\'s coordinator address:', await vrfConsumer.s_vrfCoordinator());
 
 	// Deploy Tokenizer contract
-	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
+	const initialSupply = ethers.parseEther("1000000");
 	const Tokenizer = await ethers.getContractFactory('Tokenizer');
 	const tokenizer = await Tokenizer.deploy(
 		initialSupply,

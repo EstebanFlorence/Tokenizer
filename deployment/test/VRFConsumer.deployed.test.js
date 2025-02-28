@@ -4,6 +4,7 @@ const { expect } = require("chai");
 describe("VRFConsumer (Using Deployed Contract)", function () {
 	let vrfConsumer;
 	let mockVRFCoordinator;
+	let tokenizer;
 	let owner;
 	let user1;
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
@@ -13,8 +14,10 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 
 		// Get contract instances
 		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
+
 		const vrfConsumerAddress = await tokenizer.vrfConsumer();
 		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
+
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
 		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
 
@@ -22,9 +25,8 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
 		const subscriptionId = receipt.logs[0].args[0];
-		console.log(subscriptionId);
 
-		// Fund the subscription if needed
+		// Fund the subscription
 		try {
 			await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 			console.log("Funded VRF subscription");
@@ -32,7 +34,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 			console.log("Subscription might already be funded:", error.message);
 		}
 
-		// Add consumer if needed
+		// Add consumer
 		try {
 			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 			console.log("Added consumer to VRF subscription");
@@ -41,7 +43,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 		}
 	});
 
-	describe("requestRandomness", function () {
+	describe("fulfillRandomWords", function () {
 		it("Should request randomness and emit event", async function () {
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
@@ -51,32 +53,10 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 				(log) => log.fragment && log.fragment.name === "RandomnessRequested"
 			);
 			const [requestId] = event.args;
-			
+
 			expect(event).to.not.be.undefined;
-			expect(event.args.requestId).to.not.be.undefined;
+			expect(requestId).to.not.be.undefined;
 			expect(event.args.requester).to.equal(owner.address);
-		});
-	});
-
-	describe("fulfillRandomWords", function () {
-		it("Should fulfill randomness and emit event", async function () {
-			const tx = await vrfConsumer.requestRandomness();
-			const receipt = await tx.wait();
-
-			// Find the RandomEventTriggered event
-			const event = receipt.logs.find(
-				(log) => log.fragment && log.fragment.name === "RandomnessRequested"
-			);
-			const [requestId] = event.args;
-
-			// Mock VRF response
-			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-				requestId,
-				await vrfConsumer.getAddress(),
-				[42]
-			);
-			const randomness = await vrfConsumer.getRandomness(requestId);
-			expect(randomness).to.equal(42);
 		});
 	});
 
@@ -95,11 +75,11 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[23]
 			);
 
 			const randomness = await vrfConsumer.getRandomness(requestId);
-			expect(randomness).to.equal(42);
+			expect(randomness).to.equal(23);
 		});
 
 		it("Should revert if called by non-requester", async function () {
@@ -116,7 +96,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[23]
 			);
 
 			await expect(vrfConsumer.connect(user1).getRandomness(requestId)).to.be.revertedWith("Caller is not the requester");
@@ -138,7 +118,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[23]
 			);
 
 			await vrfConsumer.clearRandomRequest(requestId);

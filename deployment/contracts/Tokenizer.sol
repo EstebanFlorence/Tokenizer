@@ -11,30 +11,32 @@ interface IVRFConsumer {
 
 contract Tokenizer is ERC20, Ownable
 {
-	// Chainlink VRF 
 	IVRFConsumer public	vrfConsumer;
 
-	// Time control
 	uint256 public	lastRandomEvent;
 	uint256 public	randomInterval = 1 days;
 
-	// Mapping which address triggered which request
 	mapping(uint256 => address)	requestIdToAddress;
 
-	// Events
 	event RandomEventTriggered(uint256 requestId, address indexed trigger);
 	event RandomEventResult(uint256 requestId, bool isMinted, uint256 amount);
 	event Received(address sender, uint256 amount);
 	event FallbackCalled(address sender, uint256 amount, bytes data);
 
-	// Fallback function to handle plain Ether transfers
+	/**
+	 * @notice Fallback function to handle plain Ether transfers
+	 * @dev Emits a FallbackCalled event with the sender's address, value, and data
+	 */
 	fallback() external payable
 	{
 
 		emit FallbackCalled(msg.sender, msg.value, msg.data);
 	}
 
-	// Receive function to handle plain Ether transfers
+	/**
+	 * @notice Receive function to handle plain Ether transfers
+	 * @dev Emits a Received event with the sender's address and value
+	 */
 	receive() external payable
 	{
 
@@ -71,6 +73,11 @@ contract Tokenizer is ERC20, Ownable
 		emit RandomEventTriggered(requestId, msg.sender);
 	}
 
+	/**
+	 * @notice Handles the randomness response from the VRF consumer
+	 * @dev Mints or burns tokens based on the randomness result
+	 * @param requestId The ID of the randomness request
+	 */
 	function handleRandomness(uint256 requestId) external
 	{
 		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");

@@ -2,20 +2,17 @@ const { ethers } = require("hardhat");
 const { expect } = require('chai');
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
-describe("Tokenizer", function ()
-{
+describe("Tokenizer", function () {
+	let vrfConsumer;
+	let mockVRFCoordinator;
 	let tokenizer;
 	let owner;
 	let user1;
 	let user2;
-	let vrfConsumer;
-	let mockVRFCoordinator;
 	const keyHash = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
 	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
 
-	async function deployTokenizerFixture()
-	{
-		// Get signers
+	async function deployTokenizerFixture() {
 		[owner, user1, user2] = await ethers.getSigners();
 
 		// Deploy VRF Coordinator Mock
@@ -27,9 +24,6 @@ describe("Tokenizer", function ()
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
 		const subscriptionId = receipt.logs[0].args[0];
-
-		// Fund the subscription
-		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 
 		// Deploy VRFConsumer
 		const VRFConsumer = await ethers.getContractFactory("VRFConsumer");
@@ -45,6 +39,9 @@ describe("Tokenizer", function ()
 			initialSupply,
 			await vrfConsumer.getAddress()
 		);
+
+		// Fund the subscription
+		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, await tokenizer.vrfConsumer());
@@ -90,7 +87,6 @@ describe("Tokenizer", function ()
 			await ethers.provider.send("evm_mine"); // Mine a new block
 			await expect(tokenizer.triggerRandomEvent())
 				.to.emit(tokenizer, "RandomEventTriggered")
-				// .withArgs(expect.anyValue, owner.address);
 		});
 
 		it("Should not allow random event before interval", async function () {

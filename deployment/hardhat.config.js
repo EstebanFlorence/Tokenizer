@@ -3,7 +3,6 @@ require("@nomicfoundation/hardhat-chai-matchers");
 // require("@nomiclabs/hardhat-etherscan");
 require("dotenv").config();
 
-// const { alchemyApiKey, metamaskPrivateKey, sepoliaPrivateKey, etherscanApiKey } = require('./secrets.json');	// or process.env?
 const { API_URL, PRIVATE_KEY } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -39,20 +38,18 @@ module.exports = {
 			}
 		]
 	},
-	defaultNetwork: "sepolia",
+	// defaultNetwork: "sepolia",
 	networks: {
 		hardhat: {
 		  chainId: 31337,  // Default Hardhat chain ID
 		},
 		localhost: {
 			url: "http://127.0.0.1:8545",
-			chainId: 31337,  // Same chain ID for local node
+			chainId: 31337,
 		},
 		sepolia: {
 			url: "https://eth-sepolia.g.alchemy.com/v2/" + API_URL,
 			accounts: [`0x${PRIVATE_KEY}`]
-			// url: process.env.SEPOLIA_RPC_URL,
-			// accounts: [process.env.PRIVATE_KEY], 
 		}
 	},
 };

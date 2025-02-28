@@ -2,12 +2,12 @@ const { ethers } = require("hardhat");
 const { expect } = require('chai');
 
 describe("Tokenizer (Using Deployed Contract)", function () {
+	let vrfConsumer;
+	let mockVRFCoordinator;
 	let tokenizer;
 	let owner;
 	let user1;
 	let user2;
-	let vrfConsumer;
-	let mockVRFCoordinator;
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 	before(async function () {
@@ -15,8 +15,10 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 		// Get contract instances
 		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
+
 		const vrfConsumerAddress = await tokenizer.vrfConsumer();
 		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
+
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
 		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
 
@@ -24,9 +26,8 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
 		const subscriptionId = receipt.logs[0].args[0];
-		console.log(subscriptionId);
 
-		// Fund the subscription if needed
+		// Fund the subscription
 		try {
 			await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 			console.log("Funded VRF subscription");
@@ -34,7 +35,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			console.log("Subscription might already be funded:", error.message);
 		}
 
-		// Add consumer if needed
+		// Add consumer
 		try {
 			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 			console.log("Added consumer to VRF subscription");
@@ -61,7 +62,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const mintAmount = ethers.parseEther("100");
 			await expect(
 				tokenizer.connect(user1).mint(user1.address, mintAmount)
-			).to.be.revertedWith("Ownable: caller is not the owner");
+				).to.be.revertedWith("Ownable: caller is not the owner");
 		});
 	});
 
@@ -69,7 +70,8 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		it("Should trigger random event", async function () {
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			await expect(tokenizer.triggerRandomEvent()).to.emit(tokenizer, "RandomEventTriggered");
+			await expect(tokenizer.triggerRandomEvent())
+				.to.emit(tokenizer, "RandomEventTriggered");
 		});
 
 		it("Should not allow random event before interval", async function () {
@@ -109,7 +111,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 
 		it("Should process random words and burn tokens on odd number", async function () {
-			// Trigger event
+			// Trigger random event
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
 			const tx = await tokenizer.triggerRandomEvent();
@@ -124,7 +126,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			// Get initial balance
 			const initialBalance = await tokenizer.balanceOf(owner.address);
 
-			// Mock VRF response (odd number → burn)
+			// Mock VRF response
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [1]);
 			await tokenizer.handleRandomness(requestId);
 

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.6;
 
-// import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-// import "@chainlink/contracts/src/v0.8/vrf/VRFCoordinatorV2.sol";
-// import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
-
 import "@chainlink/contracts/src/v0.8/vrf/dev/VRFCoordinatorV2_5.sol";
 import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
@@ -12,15 +8,16 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
 
 contract VRFConsumer is VRFConsumerBaseV2Plus
 {
-	// VRFCoordinatorV2Interface public immutable	coordinator;
 	uint256 public immutable	subscriptionId;
 	bytes32	public immutable	keyHash;
 	uint32 public immutable		callbackGasLimit = 100000;
 	uint16 public immutable		requestConfirmations = 3;
 	uint16 public immutable		numWords = 1;
 
-	mapping(uint256 => address) public	requestIdToRoller;
-	mapping(uint256 => uint256) public	rollerToResult;
+	uint256 private constant RANDOMNESS_IN_PROGRESS = 42;
+
+	mapping(uint256 => address) public	requestIdToSender;
+	mapping(address => uint256) public	senderToRandomness;
 
 	event RandomnessRequested(uint256 requestId, address requester);
 	event RandomnessFulfilled(uint256 requestId, uint256 randomness);
@@ -36,6 +33,11 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 		keyHash = _keyHash;
 	}
 
+	/**
+	 * @notice Requests randomness from Chainlink VRF
+	 * @dev Each address can only have one request in progress at a time
+	 * @return requestId The ID of the randomness request
+	 */
 	function requestRandomness() external returns (uint256 requestId)
 	{
 		requestId = s_vrfCoordinator.requestRandomWords(
@@ -50,31 +52,54 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 				)
 			})
 		);
-		requestIdToRoller[requestId] = msg.sender;
+
+		requestIdToSender[requestId] = msg.sender;
+		senderToRandomness[msg.sender] = RANDOMNESS_IN_PROGRESS;
+
 		emit RandomnessRequested(requestId, msg.sender);
 	}
 
+	/**
+	 * @notice Callback function used by VRF Coordinator to deliver randomness
+	 * @param requestId The ID of the randomness request
+	 * @param randomWords The random result returned by the VRF Coordinator
+	 */
 	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override
 	{
 		uint256 randomness = randomWords[0];
-		rollerToResult[requestId] = randomness;
+
+		senderToRandomness[requestIdToSender[requestId]] = randomness;
 
 		emit RandomnessFulfilled(requestId, randomness);
 	}
 
+	/**
+	 * @notice Gets the randomness result for the caller
+	 * @dev Caller must be the original requester
+	 * @param requestId The ID of the randomness request
+	 * @return The random value
+	 */
 	function getRandomness(uint256 requestId) external view returns (uint256)
 	{
-		require(msg.sender == requestIdToRoller[requestId], "Caller is not the requester");
+		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
-		uint256	randomness = rollerToResult[requestId];
+		uint256	randomness = senderToRandomness[msg.sender];
+		require(randomness != 0 && randomness != RANDOMNESS_IN_PROGRESS, "Randomness not available");
 
 		return randomness;
 	}
 
+	/**
+	 * @notice Clears randomness request data for an address
+	 * @dev Can only be called by the original requester
+	 * @param requestId The ID of the request to clear
+	 */
 	function clearRandomRequest(uint256 requestId) external
 	{
-		delete requestIdToRoller[requestId];
-		delete rollerToResult[requestId];
+		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
+
+		delete requestIdToSender[requestId];
+		delete senderToRandomness[msg.sender];
 	}
 
 }

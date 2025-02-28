@@ -8,11 +8,9 @@ describe("VRFConsumer", function () {
 	let owner;
 	let user1;
 	const keyHash = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
-	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
 
 	async function deployTokenizerFixture()
 	{
-		// Get signers
 		[owner, user1, user2] = await ethers.getSigners();
 
 		// Deploy VRF Coordinator Mock
@@ -25,9 +23,6 @@ describe("VRFConsumer", function () {
 		const receipt = await tx.wait();
 		const subscriptionId = receipt.logs[0].args[0];
 
-		// Fund the subscription
-		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
-
 		// Deploy VRFConsumer
 		const VRFConsumer = await ethers.getContractFactory("VRFConsumer");
 		vrfConsumer = await VRFConsumer.deploy(
@@ -36,20 +31,16 @@ describe("VRFConsumer", function () {
 			keyHash
 		);
 
-		// Deploy Tokenizer
-		const Tokenizer = await ethers.getContractFactory("Tokenizer");
-		tokenizer = await Tokenizer.deploy(
-			initialSupply,
-			await vrfConsumer.getAddress()
-		);
+		// Fund the subscription
+		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 
 		// Add consumer to VRF
-		await mockVRFCoordinator.addConsumer(subscriptionId, await tokenizer.vrfConsumer());
+		await mockVRFCoordinator.addConsumer(subscriptionId, await vrfConsumer.getAddress());
 
 		return { vrfConsumer, mockVRFCoordinator, owner, user1, user2, subscriptionId };
 	}
 
-	describe("requestRandomness", function () {
+	describe("fulfillRandomWords", function () {
 		it("Should request randomness and emit event", async function () {
 			const { vrfConsumer, owner } = await loadFixture(deployTokenizerFixture);
 			const tx = await vrfConsumer.requestRandomness();
@@ -62,31 +53,8 @@ describe("VRFConsumer", function () {
 			const [requestId] = event.args;
 			
 			expect(event).to.not.be.undefined;
-			expect(event.args.requestId).to.not.be.undefined;
+			expect(requestId).to.not.be.undefined;
 			expect(event.args.requester).to.equal(owner.address);
-		});
-	});
-
-	describe("fulfillRandomWords", function () {
-		it("Should fulfill randomness and emit event", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
-			const tx = await vrfConsumer.requestRandomness();
-			const receipt = await tx.wait();
-
-			// Find the RandomEventTriggered event
-			const event = receipt.logs.find(
-				(log) => log.fragment && log.fragment.name === "RandomnessRequested"
-			);
-			const [requestId] = event.args;
-
-			// Mock VRF response
-			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-				requestId,
-				await vrfConsumer.getAddress(),
-				[42]
-			);
-			const randomness = await vrfConsumer.getRandomness(requestId);
-			expect(randomness).to.equal(42);
 		});
 	});
 
@@ -106,11 +74,11 @@ describe("VRFConsumer", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[23]
 			);
 
 			const randomness = await vrfConsumer.getRandomness(requestId);
-			expect(randomness).to.equal(42);
+			expect(randomness).to.equal(23);
 		});
 
 		it("Should revert if called by non-requester", async function () {
@@ -128,7 +96,7 @@ describe("VRFConsumer", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[44]
 			);
 
 			await expect(vrfConsumer.connect(user1).getRandomness(requestId)).to.be.revertedWith("Caller is not the requester");
@@ -151,7 +119,7 @@ describe("VRFConsumer", function () {
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 				requestId,
 				await vrfConsumer.getAddress(),
-				[42]
+				[777]
 			);
 
 			await vrfConsumer.clearRandomRequest(requestId);

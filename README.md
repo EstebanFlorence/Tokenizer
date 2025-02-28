@@ -2,6 +2,7 @@
 
 Explain the choices you had to make and the reasons why you made these choices.
 
+
 # Documentation
 
 - https://docs.openzeppelin.com/learn/
@@ -9,7 +10,14 @@ Explain the choices you had to make and the reasons why you made these choices.
 - https://ethereum.org/en/developers/docs/smart-contracts/compiling/
 - https://medium.com/coinmonks/blockscores-45e0c062de5e
 
-# Usage
+## Chainlink Verifiable Randomness Function
+- https://vrf.chain.link/
+- https://docs.chain.link/vrf/v2-5/getting-started
+- https://docs.chain.link/vrf/v2-5/subscription/get-a-random-number
+- https://docs.chain.link/vrf/v2-5/supported-networks
+
+
+# Steps
 
 ## Installation
 - npm init -y
@@ -39,12 +47,6 @@ Explain the choices you had to make and the reasons why you made these choices.
 Address: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
 Contract: 
 
-## Chainlink Verifiable Randomness Function
-- https://vrf.chain.link/
-- https://docs.chain.link/vrf/v2/subscription/examples/get-a-random-number
-- https://docs.chain.link/vrf/v2/subscription/supported-networks
-- https://docs.chain.link/vrf/v2-5/supported-networks
-
 User calls Tokenizer.triggerRandomEvent()
 ⬇ Calls
 VRFConsumer.requestRandomness() (requests randomness from Chainlink)
@@ -52,5 +54,3 @@ VRFConsumer.requestRandomness() (requests randomness from Chainlink)
 Chainlink VRF processes and calls VRFConsumer.fulfillRandomWords()
 ⬇ Stores randomness
 Tokenizer fetches randomness using vrfConsumer.getRandomness(requestId)
-
-
