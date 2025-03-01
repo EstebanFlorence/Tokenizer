@@ -28,9 +28,7 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install @openzeppelin/contracts
 - npm install --save-dev @nomicfoundation/hardhat-ethers ethers
 - npx hardhat init [empty hardhat.config.js]
-
 - npm install @chainlink/contracts --save
-- https://docs.chain.link/vrf/v2/subscription/examples/test-locally
 
 ## Setup
 - npx hardhat node

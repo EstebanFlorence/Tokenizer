@@ -47,7 +47,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 	describe("Deployment", function () {
 		it("Should connect to deployed contract", async function () {
-			expect(await tokenizer.owner()).to.equal(owner.address);
+			expect(await tokenizer.hasRole(await tokenizer.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
 		});
 	});
 
@@ -63,7 +63,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const mintAmount = ethers.parseEther("100");
 			await expect(
 				tokenizer.connect(user1).mint(user1.address, mintAmount)
-				).to.be.revertedWith("Ownable: caller is not the owner");
+				).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.MINTER_ROLE()}`);
 		});
 	});
 
@@ -76,8 +76,8 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 
 		it("Should not allow non-owner to pause or unpause the contract", async function () {
-			await expect(tokenizer.connect(user1).pause()).to.be.revertedWith("Ownable: caller is not the owner");
-			await expect(tokenizer.connect(user1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+			await expect(tokenizer.connect(user1).pause()).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
+			await expect(tokenizer.connect(user1).unpause()).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
 		});
 
 		it("Should not allow minting when paused", async function () {

@@ -2,7 +2,8 @@
 pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+// import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 interface IVRFConsumer {
@@ -10,8 +11,11 @@ interface IVRFConsumer {
 	function getRandomness(uint256 requestId) external view returns (uint256);
 }
 
-contract Tokenizer is ERC20, Ownable, Pausable
+contract Tokenizer is ERC20, Pausable, AccessControl
 {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
 	IVRFConsumer public	vrfConsumer;
 
 	uint256 public	lastRandomEvent;
@@ -53,19 +57,23 @@ contract Tokenizer is ERC20, Ownable, Pausable
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		_mint(_msgSender(), initialSupply);
 		lastRandomEvent = block.timestamp;
+
+		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(MINTER_ROLE, _msgSender());
+        _setupRole(PAUSER_ROLE, _msgSender());
 	}
 
-	function pause() external onlyOwner
+	function pause() external onlyRole(PAUSER_ROLE)
 	{
 		_pause();
 	}
 
-	function unpause() external onlyOwner
+	function unpause() external onlyRole(PAUSER_ROLE)
 	{
 		_unpause();
 	}
 
-	function mint(address to, uint256 amount) external onlyOwner whenNotPaused
+	function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused
 	{
 		_mint(to, amount);
 	}
