@@ -4,8 +4,8 @@ const { VRF_COORDINATOR_ADDRESS, VRF_KEY_HASH, SUBSCRIPTION_ID } = process.env;
 
 const subscriptionId = BigInt(SUBSCRIPTION_ID);
 
-async function main ()
-{
+async function main () {
+
 	const [deployer] = await ethers.getSigners();
 	console.log("Deploying contract with the account:", deployer.address);
 
@@ -40,10 +40,8 @@ async function main ()
 
 main()
 	.then(() => process.exit(0))
-	.catch
-	(
-		error => 
-		{
+	.catch (
+		error => {
 			console.error(error);
 			process.exit(1);
 		}

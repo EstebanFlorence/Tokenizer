@@ -11,6 +11,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 	before(async function () {
+
 		[owner, user1, user2] = await ethers.getSigners();
 
 		// Get contract instances
@@ -63,6 +64,37 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			await expect(
 				tokenizer.connect(user1).mint(user1.address, mintAmount)
 				).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+	});
+
+	describe("Pausing", function () {
+		it("Should allow owner to pause and unpause the contract", async function () {
+			await tokenizer.pause();
+			expect(await tokenizer.paused()).to.be.true;
+			await tokenizer.unpause();
+			expect(await tokenizer.paused()).to.be.false;
+		});
+
+		it("Should not allow non-owner to pause or unpause the contract", async function () {
+			await expect(tokenizer.connect(user1).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+			await expect(tokenizer.connect(user1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+
+		it("Should not allow minting when paused", async function () {
+			const mintAmount = ethers.parseEther("100");
+			await tokenizer.pause();
+			await expect(tokenizer.mint(user1.address, mintAmount)).to.be.revertedWith("Pausable: paused");
+			await tokenizer.unpause();
+		});
+
+		it("Should allow minting when unpaused", async function () {
+			await tokenizer.pause();
+			await tokenizer.unpause();
+			const mintAmount = ethers.parseEther("100");
+			const initialBalance = await tokenizer.balanceOf(user1.address);
+			await tokenizer.mint(user1.address, mintAmount);
+			const expectedBalance = initialBalance + mintAmount;
+			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
 		});
 	});
 

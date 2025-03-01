@@ -13,6 +13,7 @@ describe("Tokenizer", function () {
 	const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
 
 	async function deployTokenizerFixture() {
+
 		[owner, user1, user2] = await ethers.getSigners();
 
 		// Deploy VRF Coordinator Mock
@@ -76,6 +77,38 @@ describe("Tokenizer", function () {
 			await expect(
 				tokenizer.connect(user1).mint(user1.address, mintAmount)
 			).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+	});
+
+	describe("Pausing", function () {
+		it("Should allow owner to pause and unpause the contract", async function () {
+			const { tokenizer, owner } = await loadFixture(deployTokenizerFixture);
+			await tokenizer.pause();
+			expect(await tokenizer.paused()).to.be.true;
+			await tokenizer.unpause();
+			expect(await tokenizer.paused()).to.be.false;
+		});
+
+		it("Should not allow non-owner to pause or unpause the contract", async function () {
+			const { tokenizer, user1 } = await loadFixture(deployTokenizerFixture);
+			await expect(tokenizer.connect(user1).pause()).to.be.revertedWith("Ownable: caller is not the owner");
+			await expect(tokenizer.connect(user1).unpause()).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+
+		it("Should not allow minting when paused", async function () {
+			const { tokenizer, owner, user1 } = await loadFixture(deployTokenizerFixture);
+			const mintAmount = ethers.parseEther("100");
+			await tokenizer.pause();
+			await expect(tokenizer.mint(user1.address, mintAmount)).to.be.revertedWith("Pausable: paused");
+		});
+
+		it("Should allow minting when unpaused", async function () {
+			const { tokenizer, owner, user1 } = await loadFixture(deployTokenizerFixture);
+			const mintAmount = ethers.parseEther("100");
+			await tokenizer.pause();
+			await tokenizer.unpause();
+			await tokenizer.mint(user1.address, mintAmount);
+			expect(await tokenizer.balanceOf(user1.address)).to.equal(mintAmount);
 		});
 	});
 

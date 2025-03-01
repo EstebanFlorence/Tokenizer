@@ -3,13 +3,14 @@ pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 interface IVRFConsumer {
 	function requestRandomness() external returns (uint256 requestId);
 	function getRandomness(uint256 requestId) external view returns (uint256);
 }
 
-contract Tokenizer is ERC20, Ownable
+contract Tokenizer is ERC20, Ownable, Pausable
 {
 	IVRFConsumer public	vrfConsumer;
 
@@ -54,7 +55,17 @@ contract Tokenizer is ERC20, Ownable
 		lastRandomEvent = block.timestamp;
 	}
 
-	function mint(address to, uint256 amount) external onlyOwner
+	function pause() external onlyOwner
+	{
+		_pause();
+	}
+
+	function unpause() external onlyOwner
+	{
+		_unpause();
+	}
+
+	function mint(address to, uint256 amount) external onlyOwner whenNotPaused
 	{
 		_mint(to, amount);
 	}
@@ -64,12 +75,14 @@ contract Tokenizer is ERC20, Ownable
 	 * @dev Requests random words from the VRF consumer and stores the request ID with the caller's address.
 	 * @return requestId The ID of the random words request.
 	 */
-	function triggerRandomEvent() external returns(uint256 requestId)
+	function triggerRandomEvent() external whenNotPaused returns(uint256 requestId)
 	{
 		require(block.timestamp >= lastRandomEvent + randomInterval, "Too soon for a random event");
+
 		requestId = vrfConsumer.requestRandomness();
 		requestIdToAddress[requestId] = msg.sender;
 		lastRandomEvent = block.timestamp;
+
 		emit RandomEventTriggered(requestId, msg.sender);
 	}
 
@@ -78,7 +91,7 @@ contract Tokenizer is ERC20, Ownable
 	 * @dev Mints or burns tokens based on the randomness result
 	 * @param requestId The ID of the randomness request
 	 */
-	function handleRandomness(uint256 requestId) external
+	function handleRandomness(uint256 requestId) external whenNotPaused
 	{
 		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
 		uint256 randomness = vrfConsumer.getRandomness(requestId);
@@ -102,5 +115,4 @@ contract Tokenizer is ERC20, Ownable
 		emit RandomEventResult(requestId, shouldMint, amount);
 		delete requestIdToAddress[requestId];
 	}
-
 }

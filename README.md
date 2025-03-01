@@ -5,10 +5,13 @@ Explain the choices you had to make and the reasons why you made these choices.
 
 # Documentation
 
-- https://docs.openzeppelin.com/learn/
 - https://ethereum.org/en/developers/docs/smart-contracts/anatomy/
 - https://ethereum.org/en/developers/docs/smart-contracts/compiling/
-- https://medium.com/coinmonks/blockscores-45e0c062de5e
+
+## OpenZeppelin
+- https://docs.openzeppelin.com/learn/
+- https://docs.openzeppelin.com/contracts/5.x/
+
 
 ## Chainlink Verifiable Randomness Function
 - https://vrf.chain.link/

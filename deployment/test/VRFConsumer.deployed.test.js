@@ -10,6 +10,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 	before(async function () {
+
 		[owner, user1] = await ethers.getSigners();
 
 		// Get contract instances
