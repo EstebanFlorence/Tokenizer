@@ -12,7 +12,6 @@ Explain the choices you had to make and the reasons why you made these choices.
 - https://docs.openzeppelin.com/learn/
 - https://docs.openzeppelin.com/contracts/5.x/
 
-
 ## Chainlink Verifiable Randomness Function
 - https://vrf.chain.link/
 - https://docs.chain.link/vrf/v2-5/getting-started

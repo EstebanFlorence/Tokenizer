@@ -2,9 +2,9 @@
 pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./MultisigWallet.sol";
 
 interface IVRFConsumer {
 	function requestRandomness() external returns (uint256 requestId);
@@ -13,10 +13,11 @@ interface IVRFConsumer {
 
 contract Tokenizer is ERC20, Pausable, AccessControl
 {
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+	bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
 	IVRFConsumer public	vrfConsumer;
+	// MultisigWallet public multisigWallet;
 
 	uint256 public	lastRandomEvent;
 	uint256 public	randomInterval = 1 days;
@@ -51,16 +52,19 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	constructor(
 		uint256 initialSupply,
 		address _vrfConsumer
+		// address[] memory _owners,
+		// uint256 _requiredSignatures
 	)
 	ERC20("Tokenizer", "TOK")
 	{
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
+		// multisigWallet = new MultisigWallet(_owners, _requiredSignatures);
 		_mint(_msgSender(), initialSupply);
 		lastRandomEvent = block.timestamp;
 
 		_setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(MINTER_ROLE, _msgSender());
-        _setupRole(PAUSER_ROLE, _msgSender());
+		_setupRole(MINTER_ROLE, _msgSender());
+		_setupRole(PAUSER_ROLE, _msgSender());
 	}
 
 	function pause() external onlyRole(PAUSER_ROLE)
