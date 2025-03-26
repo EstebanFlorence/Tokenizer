@@ -80,6 +80,25 @@ describe("Tokenizer", function () {
 		});
 	});
 
+	describe("Burning", function () {
+		it("Should allow owner to burn tokens", async function () {
+			const { tokenizer, user1 } = await loadFixture(deployTokenizerFixture);
+			const mintAmount = ethers.parseEther("100");
+			await tokenizer.mint(user1.address, mintAmount);
+			const burnAmount = ethers.parseEther("50");
+			await tokenizer.burn(user1.address, burnAmount);
+			expect(await tokenizer.balanceOf(user1.address)).to.equal(burnAmount);
+		});
+
+		it("Should not allow non-owner to burn tokens", async function () {
+			const { tokenizer, user1 } = await loadFixture(deployTokenizerFixture);
+			const mintAmount = ethers.parseEther("100");
+			await expect(
+				tokenizer.connect(user1).burn(user1.address, mintAmount)
+			).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.BURNER_ROLE()}`);
+		});
+	});
+
 	describe("Pausing", function () {
 		it("Should allow owner to pause and unpause the contract", async function () {
 			const { tokenizer, owner } = await loadFixture(deployTokenizerFixture);

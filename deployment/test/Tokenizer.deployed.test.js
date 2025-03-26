@@ -55,7 +55,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		it("Should allow owner to mint tokens", async function () {
 			const mintAmount = ethers.parseEther("100");
 			const initialBalance = await tokenizer.balanceOf(user1.address);
-			await tokenizer.mint(user1.address, mintAmount);
+			await tokenizer.connect(owner).mint(user1.address, mintAmount);
 			const expectedBalance = initialBalance + mintAmount;
 			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
 		});
@@ -67,11 +67,27 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 	});
 
+	describe("Burning", function () {
+		it("Should allow owner to burn tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+			const initialBalance = await tokenizer.balanceOf(user1.address);
+			await tokenizer.connect(owner).burn(user1.address, mintAmount);
+			const expectedBalance = initialBalance - mintAmount;
+			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
+		});
+		it("Should not allow non-owner to burn tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+			await expect(
+				tokenizer.connect(user1).burn(user1.address, mintAmount)
+				).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.BURNER_ROLE()}`);
+		});
+	});
+
 	describe("Pausing", function () {
 		it("Should allow owner to pause and unpause the contract", async function () {
-			await tokenizer.pause();
+			await tokenizer.connect(owner).pause();
 			expect(await tokenizer.paused()).to.be.true;
-			await tokenizer.unpause();
+			await tokenizer.connect(owner).unpause();
 			expect(await tokenizer.paused()).to.be.false;
 		});
 
@@ -102,19 +118,19 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		it("Should trigger random event", async function () {
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			await expect(tokenizer.triggerRandomEvent())
+			await expect(tokenizer.connect(owner).triggerRandomEvent())
 				.to.emit(tokenizer, "RandomEventTriggered");
 		});
 
 		it("Should not allow random event before interval", async function () {
-			await expect(tokenizer.triggerRandomEvent()).to.be.revertedWith("Too soon for a random event");
+			await expect(tokenizer.connect(owner).triggerRandomEvent()).to.be.revertedWith("Too soon for a random event");
 		});
 
 		it("Should process random words and mint tokens on even number", async function () {
 			// Trigger random event
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.triggerRandomEvent();
+			const tx = await tokenizer.connect(owner).triggerRandomEvent();
 			const receipt = await tx.wait();
 
 			// Find the RandomEventTriggered event
@@ -133,7 +149,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 				await vrfConsumer.getAddress(),
 				[2]
 			);
-			await tokenizer.handleRandomness(requestId);
+			await tokenizer.connect(owner).handleRandomness(requestId);
 
 			// Verify balance increased
 			const finalBalance = await tokenizer.balanceOf(owner.address);
@@ -146,7 +162,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			// Trigger random event
 			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.triggerRandomEvent();
+			const tx = await tokenizer.connect(owner).triggerRandomEvent();
 			const receipt = await tx.wait();
 
 			// Find the RandomEventTriggered event
@@ -160,7 +176,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Mock VRF response
 			await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [1]);
-			await tokenizer.handleRandomness(requestId);
+			await tokenizer.connect(owner).handleRandomness(requestId);
 
 			// Verify balance changed
 			const finalBalance = await tokenizer.balanceOf(owner.address);
