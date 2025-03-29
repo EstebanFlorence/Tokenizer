@@ -26,31 +26,31 @@ contract MultisigWallet
 		bool executed;
 	}
 
-	event TransactionSubmitted(uint256 indexed transactionId, address indexed to, uint256 value, bytes data);
+	event TransactionSubmitted(uint256 transactionId, address indexed to, uint256 value, bytes data);
 	event TransactionApproved(uint256 indexed transactionId, address indexed owner);
 	event TransactionExecuted(uint256 indexed transactionId);
 
 	modifier onlyOwner()
 	{
-		require(isOwner[msg.sender], "Not an owner");
+		require(isOwner[msg.sender], "Multisig: caller is not the owner");
 		_;
 	}
 
 	modifier transactionExists(uint256 transactionId)
 	{
-		require(transactions[transactionId].to != address(0), "Transaction does not exist");
+		require(transactions[transactionId].to != address(0), "Multisig: transaction does not exist");
 		_;
 	}
 
 	modifier notApproved(uint256 transactionId)
 	{
-		require(!approvals[transactionId][msg.sender], "Transaction already approved");
+		require(!approvals[transactionId][msg.sender], "Multisig: transaction already approved");
 		_;
 	}
 
 	modifier notExecuted(uint256 transactionId)
 	{
-		require(!transactions[transactionId].executed, "Transaction already executed");
+		require(!transactions[transactionId].executed, "Multisig: transaction already executed");
 		_;
 	}
 

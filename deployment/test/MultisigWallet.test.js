@@ -3,10 +3,7 @@ const { expect } = require("chai");
 
 describe("MultisigWallet", function () {
 	let multisigWallet;
-	let owner1;
-	let owner2;
-	let owner3;
-	let nonOwner;
+	let owner1, owner2, owner3, nonOwner;
 	const requiredSignatures = 2;
 
 	beforeEach(async function () {
@@ -30,7 +27,7 @@ describe("MultisigWallet", function () {
 		it("Should not allow non-owners to submit transactions", async function () {
 			await expect(
 				multisigWallet.connect(nonOwner).submitTransaction(owner1.address, 0, "0x")
-			).to.be.revertedWith("Not an owner");
+			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 	});
 
@@ -52,7 +49,7 @@ describe("MultisigWallet", function () {
 			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
 			await expect(
 				multisigWallet.connect(nonOwner).approveTransaction(0)
-			).to.be.revertedWith("Not an owner");
+			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 
 		it("Should execute transaction after enough approvals", async function () {
@@ -77,7 +74,7 @@ describe("MultisigWallet", function () {
 			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
 			await multisigWallet.connect(owner1).approveTransaction(0);
 			await expect(multisigWallet.connect(owner1).approveTransaction(0))
-				.to.be.revertedWith("Transaction already approved");
+				.to.be.revertedWith("Multisig: transaction already approved");
 		});
 
 		it("Should not allow execution of already executed transactions", async function () {
@@ -88,7 +85,7 @@ describe("MultisigWallet", function () {
 			await multisigWallet.connect(owner2).approveTransaction(0);
 			await multisigWallet.connect(owner2).executeTransaction(0);
 			await expect(multisigWallet.connect(owner3).executeTransaction(0))
-				.to.be.revertedWith("Transaction already executed");
+				.to.be.revertedWith("Multisig: transaction already executed");
 		});
 	});
 });

@@ -5,8 +5,7 @@ describe("VRFConsumer (Using Deployed Contract)", function () {
 	let vrfConsumer;
 	let mockVRFCoordinator;
 	let tokenizer;
-	let owner;
-	let user1;
+	let owner, user1;
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 
 	before(async function () {

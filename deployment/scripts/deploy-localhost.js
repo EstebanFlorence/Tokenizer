@@ -2,10 +2,10 @@ const { ethers } = require("hardhat");
 
 async function main () {
 
-	const [deployer] = await ethers.getSigners();
+	const [deployer, owner2, owner3] = await ethers.getSigners();
 	console.log("Deploying contract with the account:", deployer.address);
 
-	// Deploy VRFCoordinatorV2_5Mock (for testing)
+	// Deploy VRFCoordinatorV2_5Mock
 	const VRFCoordinatorV2_5Mock = await ethers.getContractFactory("VRFCoordinatorV2_5Mock");
 	const mockVRFCoordinator = await VRFCoordinatorV2_5Mock.deploy(100000, 1e9, 6110300000000000);
 
@@ -44,9 +44,34 @@ async function main () {
 	await tokenizer.waitForDeployment();
 	console.log('Tokenizer deployed at:', await tokenizer.getAddress());
 
-	// Add Tokenizer as a VRF consumer
+	// Deploy BiscaTreasury contract
+	const BiscaTreasury = await ethers.getContractFactory('BiscaTreasury');
+	const owners = [deployer.address, owner2.address, owner3.address];
+	const requiredSignatures = 2;
+	const biscaTreasury = await BiscaTreasury.deploy(
+		await vrfConsumer.getAddress(),
+		await tokenizer.getAddress(),
+		owners,
+		requiredSignatures
+	);
+
+	await biscaTreasury.waitForDeployment();
+	console.log('BiscaTreasury deployed at:', await biscaTreasury.getAddress());
+
+    // Grant MINTER_ROLE and BURNER_ROLE to BiscaTreasury
+    const MINTER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
+    const BURNER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("BURNER_ROLE"));
+
+    await tokenizer.grantRole(MINTER_ROLE, await biscaTreasury.getAddress());
+    console.log("Granted MINTER_ROLE to BiscaTreasury");
+
+    await tokenizer.grantRole(BURNER_ROLE, await biscaTreasury.getAddress());
+    console.log("Granted BURNER_ROLE to BiscaTreasury");
+
+	// Add consumer to VRF
 	await mockVRFCoordinator.addConsumer(subscriptionId, await vrfConsumer.getAddress());
 	console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
+
 }
 
 main()

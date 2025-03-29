@@ -5,14 +5,15 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 	let vrfConsumer;
 	let mockVRFCoordinator;
 	let tokenizer;
-	let owner;
-	let user1;
-	let user2;
+	let biscaTreasury;
+	let owner, owner2, owner3, user1;
+
 	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+	const biscaTreasuryAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 
 	before(async function () {
 
-		[owner, user1, user2] = await ethers.getSigners();
+		[owner, owner2, owner3, user1] = await ethers.getSigners();
 
 		// Get contract instances
 		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
@@ -22,6 +23,8 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
 		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
+
+		biscaTreasury = await ethers.getContractAt("BiscaTreasury", biscaTreasuryAddress);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
@@ -36,8 +39,9 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			console.log("Subscription might already be funded:", error.message);
 		}
 
-		// Add consumer
+		// Add consumer to VRF
 		try {
+			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 			console.log("Added consumer to VRF subscription");
 		} catch (error) {
@@ -45,41 +49,77 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		}
 	});
 
+	describe("BiscaTreasury", function () {
+		it("Should allow BiscaTreasury to mint tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+			const initialBalance = await tokenizer.balanceOf(owner2.address);
+			const expectedBalance = initialBalance + mintAmount;
+
+			// Propose mint transaction
+			const proposeTx = await biscaTreasury.proposeMint(owner2.address, mintAmount);
+			const proposeReceipt = await proposeTx.wait();
+
+			// Fetch the transaction ID from the emitted event
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			// Execute mint transaction
+			await biscaTreasury.approveTransaction(txId);
+			await biscaTreasury.connect(owner2).approveTransaction(txId);
+			await biscaTreasury.executeTransaction(txId);
+
+			// Verify balance
+			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
+		});
+
+		it("Should allow BiscaTreasury to burn tokens", async function () {
+			const burnAmount = ethers.parseEther("50");
+			const initialBalance = await tokenizer.balanceOf(owner2.address);
+			const expectedBalance = initialBalance - burnAmount;
+
+			// Propose burn transaction
+			const proposeTx = await biscaTreasury.proposeBurn(owner2.address, burnAmount);
+			const proposeReceipt = await proposeTx.wait();
+
+			// Fetch the transaction ID from the emitted event
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			// Execute burn transaction
+			await biscaTreasury.approveTransaction(txId);
+			await biscaTreasury.connect(owner2).approveTransaction(txId);
+			await biscaTreasury.executeTransaction(txId);
+
+			// Verify balance
+			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
+		});
+
+		it("Should not allow unauthorized accounts to mint tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+
+			// Attempt to propose mint from unauthorized account
+			await expect(
+				biscaTreasury.connect(user1).proposeMint(user1.address, mintAmount)
+			).to.be.revertedWith("Multisig: caller is not the owner");
+		});
+
+		it("Should not allow unauthorized accounts to burn tokens", async function () {
+			const mintAmount = ethers.parseEther("100");
+
+			// Attempt to propose mint from unauthorized account
+			await expect(
+				biscaTreasury.connect(user1).proposeBurn(user1.address, mintAmount)
+			).to.be.revertedWith("Multisig: caller is not the owner");
+		});
+	});
+
 	describe("Deployment", function () {
 		it("Should connect to deployed contract", async function () {
 			expect(await tokenizer.hasRole(await tokenizer.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
-		});
-	});
-
-	describe("Minting", function () {
-		it("Should allow owner to mint tokens", async function () {
-			const mintAmount = ethers.parseEther("100");
-			const initialBalance = await tokenizer.balanceOf(user1.address);
-			await tokenizer.connect(owner).mint(user1.address, mintAmount);
-			const expectedBalance = initialBalance + mintAmount;
-			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
-		});
-		it("Should not allow non-owner to mint tokens", async function () {
-			const mintAmount = ethers.parseEther("100");
-			await expect(
-				tokenizer.connect(user1).mint(user1.address, mintAmount)
-				).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.MINTER_ROLE()}`);
-		});
-	});
-
-	describe("Burning", function () {
-		it("Should allow owner to burn tokens", async function () {
-			const mintAmount = ethers.parseEther("100");
-			const initialBalance = await tokenizer.balanceOf(user1.address);
-			await tokenizer.connect(owner).burn(user1.address, mintAmount);
-			const expectedBalance = initialBalance - mintAmount;
-			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
-		});
-		it("Should not allow non-owner to burn tokens", async function () {
-			const mintAmount = ethers.parseEther("100");
-			await expect(
-				tokenizer.connect(user1).burn(user1.address, mintAmount)
-				).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.BURNER_ROLE()}`);
 		});
 	});
 
@@ -92,14 +132,15 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 
 		it("Should not allow non-owner to pause or unpause the contract", async function () {
-			await expect(tokenizer.connect(user1).pause()).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
-			await expect(tokenizer.connect(user1).unpause()).to.be.revertedWith(`AccessControl: account ${user1.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
+			await expect(tokenizer.connect(owner2).pause()).to.be.revertedWith(`AccessControl: account ${owner2.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
+			await expect(tokenizer.connect(owner2).unpause()).to.be.revertedWith(`AccessControl: account ${owner2.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
 		});
 
 		it("Should not allow minting when paused", async function () {
 			const mintAmount = ethers.parseEther("100");
 			await tokenizer.pause();
-			await expect(tokenizer.mint(user1.address, mintAmount)).to.be.revertedWith("Pausable: paused");
+			await tokenizer.grantRole(await tokenizer.MINTER_ROLE(), owner.address);
+			await expect(tokenizer.mint(owner2.address, mintAmount)).to.be.revertedWith("Pausable: paused");
 			await tokenizer.unpause();
 		});
 
@@ -107,10 +148,10 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			await tokenizer.pause();
 			await tokenizer.unpause();
 			const mintAmount = ethers.parseEther("100");
-			const initialBalance = await tokenizer.balanceOf(user1.address);
-			await tokenizer.mint(user1.address, mintAmount);
+			const initialBalance = await tokenizer.balanceOf(owner2.address);
+			await tokenizer.mint(owner2.address, mintAmount);
 			const expectedBalance = initialBalance + mintAmount;
-			expect(await tokenizer.balanceOf(user1.address)).to.equal(expectedBalance);
+			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
 		});
 	});
 
@@ -153,8 +194,6 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Verify balance increased
 			const finalBalance = await tokenizer.balanceOf(owner.address);
-			console.log("Initial Balance:", initialBalance.toString());
-			console.log("Final Balance:\t", finalBalance.toString());
 			expect(finalBalance).to.be.greaterThan(initialBalance);
 		});
 
@@ -180,8 +219,6 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Verify balance changed
 			const finalBalance = await tokenizer.balanceOf(owner.address);
-			console.log("Initial Balance:", initialBalance.toString());
-			console.log("Final Balance:\t", finalBalance.toString());
 			expect(finalBalance).to.be.lessThan(initialBalance);
 		});
 	});

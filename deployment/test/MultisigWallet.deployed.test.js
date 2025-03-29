@@ -3,11 +3,9 @@ const { expect } = require("chai");
 
 describe("MultisigWallet (Using Deployed Contract)", function () {
 	let multisigWallet;
-	let owner1;
-	let owner2;
-	let owner3;
-	let nonOwner;
-	const multisigWalletAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+	let owner1, owner2, owner3, nonOwner;
+	const requiredSignatures = 2;
+	const multisigWalletAddress = "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707";
 
 	before(async function () {
 		[owner1, owner2, owner3, nonOwner] = await ethers.getSigners();
@@ -20,71 +18,117 @@ describe("MultisigWallet (Using Deployed Contract)", function () {
 			expect(await multisigWallet.owners(0)).to.equal(owner1.address);
 			expect(await multisigWallet.owners(1)).to.equal(owner2.address);
 			expect(await multisigWallet.owners(2)).to.equal(owner3.address);
-			expect(await multisigWallet.requiredSignatures()).to.equal(2);
+			expect(await multisigWallet.requiredSignatures()).to.equal(requiredSignatures);
 		});
 
 		it("Should not allow non-owners to submit transactions", async function () {
 			await expect(
 				multisigWallet.connect(nonOwner).submitTransaction(owner1.address, 0, "0x")
-			).to.be.revertedWith("Not an owner");
+			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 	});
 
 	describe("Transactions", function () {
 		it("Should allow owners to submit transactions", async function () {
-			await expect(multisigWallet.submitTransaction(owner1.address, 0, "0x"))
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
+
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await expect(proposeTx)
 				.to.emit(multisigWallet, "TransactionSubmitted")
-				.withArgs(0, owner1.address, 0, "0x");
+				.withArgs(txId, owner1.address, 0, "0x");
 		});
 
 		it("Should allow owners to approve transactions", async function () {
-			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
-			await expect(multisigWallet.connect(owner1).approveTransaction(1))
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
+
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await expect(multisigWallet.connect(owner1).approveTransaction(txId))
 				.to.emit(multisigWallet, "TransactionApproved")
-				.withArgs(1, owner1.address);
+				.withArgs(txId, owner1.address);
 		});
 
 		it("Should not allow non-owners to approve transactions", async function () {
-			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
+
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
 			await expect(
-				multisigWallet.connect(nonOwner).approveTransaction(2)
-			).to.be.revertedWith("Not an owner");
+				multisigWallet.connect(nonOwner).approveTransaction(txId)
+			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 
 		it("Should execute transaction after enough approvals", async function () {
-			const tx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
-			await tx.wait();
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
 
-			await multisigWallet.connect(owner1).approveTransaction(3);
-			await multisigWallet.connect(owner2).approveTransaction(3);
-			await expect(multisigWallet.connect(owner2).executeTransaction(3))
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await multisigWallet.connect(owner1).approveTransaction(txId);
+			await multisigWallet.connect(owner2).approveTransaction(txId);
+			await expect(multisigWallet.connect(owner2).executeTransaction(txId))
 				.to.emit(multisigWallet, "TransactionExecuted")
-				.withArgs(3);
+				.withArgs(txId);
 		});
 
 		it("Should not execute transaction before enough approvals", async function () {
-			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
-			await multisigWallet.connect(owner1).approveTransaction(4);
-			await expect(multisigWallet.connect(owner3).executeTransaction(4))
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
+
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await multisigWallet.connect(owner1).approveTransaction(txId);
+			await expect(multisigWallet.connect(owner3).executeTransaction(txId))
 				.to.be.revertedWith("Not enough approvals");
 		});
 
 		it("Should not allow duplicate approvals from the same owner", async function () {
-			await multisigWallet.submitTransaction(owner1.address, 0, "0x");
-			await multisigWallet.connect(owner1).approveTransaction(5);
-			await expect(multisigWallet.connect(owner1).approveTransaction(5))
-				.to.be.revertedWith("Transaction already approved");
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
+
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await multisigWallet.connect(owner1).approveTransaction(txId);
+			await expect(multisigWallet.connect(owner1).approveTransaction(txId))
+				.to.be.revertedWith("Multisig: transaction already approved");
 		});
 
 		it("Should not allow execution of already executed transactions", async function () {
-			const tx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
-			await tx.wait();
+			const proposeTx = await multisigWallet.submitTransaction(owner1.address, 0, "0x");
+			const proposeReceipt = await proposeTx.wait();
 
-			await multisigWallet.connect(owner1).approveTransaction(6);
-			await multisigWallet.connect(owner2).approveTransaction(6);
-			await multisigWallet.connect(owner2).executeTransaction(6);
-			await expect(multisigWallet.connect(owner3).executeTransaction(6))
-				.to.be.revertedWith("Transaction already executed");
+			const event = proposeReceipt.logs.find(
+				log => log.fragment && log.fragment.name === "TransactionSubmitted"
+			).args;
+			const txId = event[0];
+
+			await multisigWallet.connect(owner1).approveTransaction(txId);
+			await multisigWallet.connect(owner2).approveTransaction(txId);
+			await multisigWallet.connect(owner2).executeTransaction(txId);
+			await expect(multisigWallet.connect(owner3).executeTransaction(txId))
+				.to.be.revertedWith("Multisig: transaction already executed");
 		});
 	});
 });

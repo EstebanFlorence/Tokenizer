@@ -15,12 +15,11 @@ tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
 
 // Balance
-balance = await ethers.provider.getBalance(deployer.address);
-ethers.formatEther(balance);
-ethers.formatEther(await ethers.provider.getBalance(user1.address));
+ethers.formatEther(await ethers.provider.getBalance(deployer.address));
+ethers.formatEther(await tokenizer.balanceOf(deployer.address));
 
-// Check if deployer has the DEFAULT_ADMIN_ROLE
-const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+// Check the DEFAULT_ADMIN_ROLE
+DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 await tokenizer.hasRole(DEFAULT_ADMIN_ROLE, deployer.address);
 
 // Check other roles

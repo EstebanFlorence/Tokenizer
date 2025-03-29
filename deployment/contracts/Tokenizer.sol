@@ -59,9 +59,17 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 		lastRandomEvent = block.timestamp;
 
 		_grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-		_grantRole(MINTER_ROLE, _msgSender());
-		_grantRole(BURNER_ROLE, _msgSender());
 		_grantRole(PAUSER_ROLE, _msgSender());
+	}
+
+	function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused
+	{
+		_mint(to, amount);
+	}
+
+	function burn(address to, uint256 amount) external onlyRole(BURNER_ROLE) whenNotPaused
+	{
+		_burn(to, amount);
 	}
 
 	function pause() external onlyRole(PAUSER_ROLE)
@@ -77,26 +85,6 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	function setPauser(address pauser) external onlyRole(DEFAULT_ADMIN_ROLE)
 	{
 		_grantRole(PAUSER_ROLE, pauser);
-	}
-
-	function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused
-	{
-		_mint(to, amount);
-	}
-
-	function setMinter(address minter) external onlyRole(DEFAULT_ADMIN_ROLE)
-	{
-		_grantRole(MINTER_ROLE, minter);
-	}
-
-	function burn(address to, uint256 amount) external onlyRole(BURNER_ROLE) whenNotPaused
-	{
-		_burn(to, amount);
-	}
-
-	function setBurner(address burner) external onlyRole(DEFAULT_ADMIN_ROLE)
-	{
-		_grantRole(BURNER_ROLE, burner);
 	}
 
 	/**

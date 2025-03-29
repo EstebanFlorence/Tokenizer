@@ -3,42 +3,105 @@ pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./MultisigWallet.sol";
+import "./Tokenizer.sol";
 
-interface IVRFConsumer {
-	function requestRandomness() external returns (uint256 requestId);
-	function getRandomness(uint256 requestId) external view returns (uint256);
-}
-
-contract BiscaTreasury is ERC20, Ownable
+contract BiscaTreasury is MultisigWallet
 {
-	// Chainlink VRF 
 	IVRFConsumer public	vrfConsumer;
+	Tokenizer public tokenizer;
 
-	// Mapping which address triggered which request
 	mapping(uint256 => address)	requestIdToAddress;
 
-	// Events
 	event RandomEventTriggered(uint256 requestId, address indexed trigger);
 	event RandomEventResult(uint256 requestId);
+	event mintProposed(address to, uint256 amount);
+	event burnProposed(address from, uint256 amount);
 
+	/**
+	 * @notice Initializes the Treasury with the multisig owners, required signatures,
+	 *         and the address of the Tokenizer contract.
+	 * @param _tokenizer The address of the deployed Tokenizer contract.
+	 * @param _owners Array of addresses that will own the multisig wallet.
+	 * @param _requiredSignatures The number of approvals required to execute a transaction.
+	 */
 	constructor(
-		uint256 initialSupply,
-		address _vrfConsumer
-	)
-	ERC20("Lalleri", "42")
+		address _vrfConsumer,
+		address _tokenizer,
+		address[] memory _owners,
+		uint256 _requiredSignatures
+	) MultisigWallet(_owners, _requiredSignatures)
 	{
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
-		_mint(_msgSender(), initialSupply);
+		tokenizer = Tokenizer(payable(_tokenizer));
 	}
 
-	function mint(address to, uint256 amount) external onlyOwner
+	/**
+	 * @notice Proposes a mint operation on the Tokenizer contract.
+	 * @param to The address to receive the minted tokens.
+	 * @param amount The amount of tokens to mint.
+	 * 
+	 * Requirements:
+	 * - The Treasury multisig must have the MINTER_ROLE in the Tokenizer contract.
+	 */
+	function proposeMint(address to, uint256 amount) external onlyOwner {
+		bytes memory data = abi.encodeWithSignature("mint(address,uint256)", to, amount);
+		submitTransaction(address(tokenizer), 0, data);
+		emit mintProposed(to, amount);
+	}
+
+	/**
+	 * @notice Proposes a burn operation on the Tokenizer contract.
+	 * @param from The address from which tokens will be burned.
+	 * @param amount The amount of tokens to burn.
+	 * 
+	 * Requirements:
+	 * - The Treasury multisig must have the BURNER_ROLE in the Tokenizer contract.
+	 */
+	function proposeBurn(address from, uint256 amount) external onlyOwner {
+		bytes memory data = abi.encodeWithSignature("burn(address,uint256)", from, amount);
+		submitTransaction(address(tokenizer), 0, data);
+		emit burnProposed(from, amount);
+	}
+
+	/**
+	 * @notice Triggers a random event if the required time interval has passed since the last event.
+	 * @dev Requests random words from the VRF consumer and stores the request ID with the caller's address.
+	 * @return requestId The ID of the random words request.
+	 */
+	function triggerRandomEvent() external returns (uint256 requestId)
 	{
-		_mint(to, amount);
+		requestId = vrfConsumer.requestRandomness();
+		requestIdToAddress[requestId] = msg.sender;
+		emit RandomEventTriggered(requestId, msg.sender);
 	}
 
-	function burn(address to, uint256 amount) external onlyOwner
+	/**
+	 * @notice Handles the randomness response from the VRF consumer
+	 * @dev Mints or burns tokens based on the randomness result
+	 * @param requestId The ID of the randomness request
+	 */
+	function handleRandomness(uint256 requestId) external onlyOwner
 	{
-		_burn(to, amount);
-	}
+		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
+		uint256 randomness = vrfConsumer.getRandomness(requestId);
+		require(randomness != 0, "Randomness not available");
 
+		address requester = requestIdToAddress[requestId];
+		bool shouldMint = (randomness % 2) == 0;
+		uint256 percentage = (randomness % 5) + 1;
+		uint256 amount = (tokenizer.totalSupply() * percentage) / 100;
+
+		if (shouldMint)
+		{
+			tokenizer.mint(requester, amount);
+		} else
+		{
+			amount = tokenizer.balanceOf(requester) < amount ? tokenizer.balanceOf(requester) : amount;
+			tokenizer.burn(requester, amount);
+		}
+
+		emit RandomEventResult(requestId);
+		delete requestIdToAddress[requestId];
+	}
 }
