@@ -1,6 +1,8 @@
 artifacts
 cache
 node_modules
+dist
+typechain-types
 .secrets.json
 .env
 TODO.md

@@ -15,8 +15,6 @@ contract BiscaTreasury is MultisigWallet
 
 	event RandomEventTriggered(uint256 requestId, address indexed trigger);
 	event RandomEventResult(uint256 requestId);
-	event mintProposed(address to, uint256 amount);
-	event burnProposed(address from, uint256 amount);
 
 	/**
 	 * @notice Initializes the Treasury with the multisig owners, required signatures,
@@ -47,7 +45,6 @@ contract BiscaTreasury is MultisigWallet
 	function proposeMint(address to, uint256 amount) external onlyOwner {
 		bytes memory data = abi.encodeWithSignature("mint(address,uint256)", to, amount);
 		submitTransaction(address(tokenizer), 0, data);
-		emit mintProposed(to, amount);
 	}
 
 	/**
@@ -61,7 +58,6 @@ contract BiscaTreasury is MultisigWallet
 	function proposeBurn(address from, uint256 amount) external onlyOwner {
 		bytes memory data = abi.encodeWithSignature("burn(address,uint256)", from, amount);
 		submitTransaction(address(tokenizer), 0, data);
-		emit burnProposed(from, amount);
 	}
 
 	/**

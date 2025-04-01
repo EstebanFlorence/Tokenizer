@@ -1,42 +1,70 @@
-const { ethers } = require("hardhat");
-const { expect } = require('chai');
+import { ethers } from "hardhat";
+import { expect } from "chai";
+import {
+	Tokenizer__factory, Tokenizer,
+	VRFConsumer__factory, VRFConsumer,
+	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
+	BiscaTreasury__factory, BiscaTreasury
+} from "../typechain-types";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { Log, LogDescription } from "ethers";
 
 describe("Tokenizer (Using Deployed Contract)", function () {
-	let vrfConsumer;
-	let mockVRFCoordinator;
-	let tokenizer;
-	let biscaTreasury;
-	let owner, owner2, owner3, user1;
-
-	const tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
-	const biscaTreasuryAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+	let tokenizer: Tokenizer;
+	let vrfConsumer: VRFConsumer;
+	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
+	let biscaTreasury: BiscaTreasury;
+	let owner: SignerWithAddress,
+		owner2: SignerWithAddress,
+		owner3: SignerWithAddress,
+		user1: SignerWithAddress;
+	const tokenizerAddress: string = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+	const biscaTreasuryAddress: string = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 
 	before(async function () {
 
 		[owner, owner2, owner3, user1] = await ethers.getSigners();
 
 		// Get contract instances
-		tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
+		tokenizer = Tokenizer__factory.connect(tokenizerAddress, owner);
 
 		const vrfConsumerAddress = await tokenizer.vrfConsumer();
-		vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
+		vrfConsumer = VRFConsumer__factory.connect(vrfConsumerAddress, owner);
 
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
-		mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
+		mockVRFCoordinator = VRFCoordinatorV2_5Mock__factory.connect(vrfCoordinatorAddress, owner);
 
-		biscaTreasury = await ethers.getContractAt("BiscaTreasury", biscaTreasuryAddress);
+		biscaTreasury = BiscaTreasury__factory.connect(biscaTreasuryAddress, owner);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
 		const receipt = await tx.wait();
-		const subscriptionId = receipt.logs[0].args[0];
+
+		if (!receipt) {
+			throw new Error("Transaction receipt is null");
+		}
+
+		// Fetch the transaction ID from the emitted event
+		const event = receipt?.logs
+			.map((log: Log) => mockVRFCoordinator.interface.parseLog(log))
+			.find((parsedLog: LogDescription | null) => parsedLog?.name === "SubscriptionCreated");
+
+		if (!event) {
+			throw new Error("SubscriptionCreated event not found in receipt logs");
+		}
+
+		const subscriptionId = event?.args[0];
 
 		// Fund the subscription
 		try {
 			await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
 			console.log("Funded VRF subscription");
 		} catch (error) {
-			console.log("Subscription might already be funded:", error.message);
+			if (error instanceof Error) {
+				console.log("Subscription might already be funded:", error.message);
+			} else {
+				console.log("Subscription might already be funded:", error);
+			}
 		}
 
 		// Add consumer to VRF
@@ -45,7 +73,11 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 			console.log("Added consumer to VRF subscription");
 		} catch (error) {
-			console.log("Consumer might already be registered:", error.message);
+			if (error instanceof Error) {
+				console.log("Subscription might already be funded:", error.message);
+			} else {
+				console.log("Subscription might already be funded:", error);
+			}
 		}
 	});
 
@@ -56,14 +88,23 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const expectedBalance = initialBalance + mintAmount;
 
 			// Propose mint transaction
-			const proposeTx = await biscaTreasury.proposeMint(owner2.address, mintAmount);
-			const proposeReceipt = await proposeTx.wait();
+			const tx = await biscaTreasury.proposeMint(owner2.address, mintAmount);
+			const receipt = await tx.wait();
+
+			if (!receipt) {
+				throw new Error("Transaction receipt is null");
+			}
 
 			// Fetch the transaction ID from the emitted event
-			const event = proposeReceipt.logs.find(
-				log => log.fragment && log.fragment.name === "TransactionSubmitted"
-			).args;
-			const txId = event[0];
+			const event = receipt?.logs
+				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.find((parsedLog: LogDescription | null) => parsedLog?.name === "TransactionSubmitted");
+
+			if (!event) {
+				throw new Error("TransactionSubmitted event not found in receipt logs");
+			}
+
+			const txId = event?.args[0];
 
 			// Execute mint transaction
 			await biscaTreasury.approveTransaction(txId);
@@ -80,14 +121,23 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const expectedBalance = initialBalance - burnAmount;
 
 			// Propose burn transaction
-			const proposeTx = await biscaTreasury.proposeBurn(owner2.address, burnAmount);
-			const proposeReceipt = await proposeTx.wait();
+			const tx = await biscaTreasury.proposeBurn(owner2.address, burnAmount);
+			const receipt = await tx.wait();
+
+			if (!receipt) {
+				throw new Error("Transaction receipt is null");
+			}
 
 			// Fetch the transaction ID from the emitted event
-			const event = proposeReceipt.logs.find(
-				log => log.fragment && log.fragment.name === "TransactionSubmitted"
-			).args;
-			const txId = event[0];
+			const event = receipt?.logs
+				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.find((parsedLog: LogDescription | null) => parsedLog?.name === "TransactionSubmitted");
+
+			if (!event) {
+				throw new Error("TransactionSubmitted event not found in receipt logs");
+			}
+
+			const txId = event?.args[0];
 
 			// Execute burn transaction
 			await biscaTreasury.approveTransaction(txId);
@@ -132,15 +182,20 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 
 		it("Should not allow non-owner to pause or unpause the contract", async function () {
-			await expect(tokenizer.connect(owner2).pause()).to.be.revertedWith(`AccessControl: account ${owner2.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
-			await expect(tokenizer.connect(owner2).unpause()).to.be.revertedWith(`AccessControl: account ${owner2.address.toLowerCase()} is missing role ${await tokenizer.PAUSER_ROLE()}`);
+			await expect(tokenizer.connect(owner2).pause())
+			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
+			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
+			await expect(tokenizer.connect(owner2).pause())
+			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
+			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
 		});
 
 		it("Should not allow minting when paused", async function () {
 			const mintAmount = ethers.parseEther("100");
 			await tokenizer.pause();
 			await tokenizer.grantRole(await tokenizer.MINTER_ROLE(), owner.address);
-			await expect(tokenizer.mint(owner2.address, mintAmount)).to.be.revertedWith("Pausable: paused");
+			await expect(tokenizer.mint(owner2.address, mintAmount))
+				.to.be.revertedWithCustomError(tokenizer, "EnforcedPause");
 			await tokenizer.unpause();
 		});
 
@@ -174,12 +229,26 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const tx = await tokenizer.connect(owner).triggerRandomEvent();
 			const receipt = await tx.wait();
 
-			// Find the RandomEventTriggered event
-			const event = receipt.logs.find(
-				(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
-			);
-			const [requestId] = event.args;
+		if (!receipt) {
+			throw new Error("Transaction receipt is null");
+		}
 
+
+			const event = receipt?.logs
+				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
+
+			if (!event) {
+				throw new Error("TransactionSubmitted event not found in receipt logs");
+			}
+
+			// const txId = event?.args[0];
+			// Find the RandomEventTriggered event
+			// const event = receipt?.logs.find(
+			// 	(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
+			// );
+
+			const requestId = event?.args ? event.args[0] : undefined;
 			// Get initial balance
 			const initialBalance = await tokenizer.balanceOf(owner.address);
 			console.log("request ID: " + requestId);
@@ -204,12 +273,20 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const tx = await tokenizer.connect(owner).triggerRandomEvent();
 			const receipt = await tx.wait();
 
-			// Find the RandomEventTriggered event
-			const event = receipt.logs.find(
-				(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
-			);
-			const [requestId] = event.args;
+			if (!receipt) {
+				throw new Error("Transaction receipt is null");
+			}
 
+			// Find the RandomEventTriggered event
+			const event = receipt?.logs
+				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
+
+			if (!event) {
+				throw new Error("TransactionSubmitted event not found in receipt logs");
+			}
+
+			const requestId = event?.args ? event.args[0] : undefined;
 			// Get initial balance
 			const initialBalance = await tokenizer.balanceOf(owner.address);
 

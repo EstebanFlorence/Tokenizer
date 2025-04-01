@@ -1,12 +1,16 @@
-require("@nomicfoundation/hardhat-ethers");
-require("@nomicfoundation/hardhat-chai-matchers");
-// require("@nomiclabs/hardhat-etherscan");
-require("dotenv").config();
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
+// import "@nomiclabs/hardhat-etherscan";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 const { API_URL, PRIVATE_KEY } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+const config: HardhatUserConfig = {
 	solidity : {
 		compilers: [
 			{
@@ -54,3 +58,5 @@ module.exports = {
 	},
 
 };
+
+export default config;

@@ -1,19 +1,25 @@
-const { ethers } = require("hardhat");
-const { expect } = require("chai");
+import { ethers } from "hardhat";
+import { expect } from "chai";
+import { MultisigWallet } from "../typechain-types";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { ContractFactory } from "ethers";
 
 describe("MultisigWallet", function () {
-	let multisigWallet;
-	let owner1, owner2, owner3, nonOwner;
-	const requiredSignatures = 2;
+	let multisigWallet: MultisigWallet;
+	let owner1: SignerWithAddress,
+		owner2: SignerWithAddress,
+		owner3: SignerWithAddress,
+		nonOwner: SignerWithAddress;
+	const requiredSignatures: number = 2;
 
 	beforeEach(async function () {
 		[owner1, owner2, owner3, nonOwner] = await ethers.getSigners();
 
-		const MultisigWallet = await ethers.getContractFactory("MultisigWallet");
-		multisigWallet = await MultisigWallet.deploy(
+		const MultisigWallet: ContractFactory = await ethers.getContractFactory("MultisigWallet");
+		multisigWallet = (await MultisigWallet.deploy(
 			[owner1.address, owner2.address, owner3.address],
 			requiredSignatures
-		);
+		)) as MultisigWallet;
 	});
 
 	describe("Deployment", function () {
