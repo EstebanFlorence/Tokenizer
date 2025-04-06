@@ -5,7 +5,7 @@ import {
 	Tokenizer__factory, Tokenizer,
 	VRFConsumer__factory, VRFConsumer,
 	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
-	BiscaTreasury__factory, BiscaTreasury
+	Treasury__factory, Treasury
 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { Log, LogDescription } from "ethers";
@@ -13,7 +13,7 @@ import { Log, LogDescription } from "ethers";
 describe("VRFConsumer", function () {
 	let vrfConsumer: VRFConsumer;
 	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
-	let biscaTreasury: BiscaTreasury;
+	let treasury: Treasury;
 	let owner: SignerWithAddress,
 		user1: SignerWithAddress,
 		user2: SignerWithAddress;

@@ -4,17 +4,16 @@ import {
 	Tokenizer__factory, Tokenizer,
 	VRFConsumer__factory, VRFConsumer,
 	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
-	BiscaTreasury__factory, BiscaTreasury
+	Treasury__factory, Treasury
 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { Log, LogDescription } from "ethers";
-import { token } from "../typechain-types/@openzeppelin/contracts";
 
 describe("Tokenizer", function () {
 	let tokenizer: Tokenizer;
 	let vrfConsumer: VRFConsumer;
 	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
-	let biscaTreasury: BiscaTreasury;
+	let treasury: Treasury;
 	let owner: SignerWithAddress,
 		owner2: SignerWithAddress,
 		owner3: SignerWithAddress,
@@ -58,23 +57,23 @@ describe("Tokenizer", function () {
 			await mockVRFCoordinator.getAddress(),
 			subscriptionId,
 			keyHash
-		  );
-		  
+		);
+
 		// Deploy Tokenizer
 		tokenizer = await new Tokenizer__factory(owner).deploy(
 			initialSupply,
 			await vrfConsumer.getAddress()
-		  );
-		  
-		  // Deploy BiscaTreasury
-		  const owners = [owner.address, owner2.address, owner3.address];
-		  const requiredSignatures = 2;
-		  biscaTreasury = await new BiscaTreasury__factory(owner).deploy(
+		);
+
+		// Deploy Treasury
+		const owners = [owner.address, owner2.address, owner3.address];
+		const requiredSignatures = 2;
+		treasury = await new Treasury__factory(owner).deploy(
 			await vrfConsumer.getAddress(),
 			await tokenizer.getAddress(),
 			owners,
 			requiredSignatures
-		  );
+		);
 
 		// Fund the subscription
 		await mockVRFCoordinator.fundSubscription(subscriptionId, ethers.parseEther("7"));
@@ -82,74 +81,74 @@ describe("Tokenizer", function () {
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumer);
 
-		// Grant roles to BiscaTreasury
+		// Grant roles to Treasury
 		const MINTER_ROLE = await tokenizer.MINTER_ROLE();
 		const BURNER_ROLE = await tokenizer.BURNER_ROLE();
-		await tokenizer.grantRole(MINTER_ROLE, await biscaTreasury.getAddress());
-		await tokenizer.grantRole(BURNER_ROLE, await biscaTreasury.getAddress());
+		await tokenizer.grantRole(MINTER_ROLE, await treasury.getAddress());
+		await tokenizer.grantRole(BURNER_ROLE, await treasury.getAddress());
 
-		return { tokenizer, biscaTreasury, mockVRFCoordinator, subscriptionId, owner, owner2, owner3, user1 };
+		return { tokenizer, treasury, mockVRFCoordinator, subscriptionId, owner, owner2, owner3, user1 };
 	}
 
-	describe("BiscaTreasury", function () {
-		it("Should allow BiscaTreasury to mint tokens", async function () {
-			const { tokenizer, biscaTreasury, owner2 } = await deployTokenizerFixture();
+	describe("Treasury", function () {
+		it("Should allow Treasury to mint tokens", async function () {
+			const { tokenizer, treasury, owner2 } = await deployTokenizerFixture();
 			const mintAmount = ethers.parseEther("100");
 
 			// Propose mint transaction
-			await biscaTreasury.proposeMint(owner2.address, mintAmount);
+			await treasury.proposeMint(owner2.address, mintAmount);
 
 			// Execute mint transaction
 			const txId = 0; // Assuming this is the first transaction
-			await biscaTreasury.approveTransaction(txId);
-			await biscaTreasury.connect(owner2).approveTransaction(txId);
-			await biscaTreasury.executeTransaction(txId);
+			await treasury.approveTransaction(txId);
+			await treasury.connect(owner2).approveTransaction(txId);
+			await treasury.executeTransaction(txId);
 
 			// Verify balance
 			expect(await tokenizer.balanceOf(owner2.address)).to.equal(mintAmount);
 		});
 
-		it("Should allow BiscaTreasury to burn tokens", async function () {
-			const { tokenizer, biscaTreasury, owner2 } = await deployTokenizerFixture();
+		it("Should allow Treasury to burn tokens", async function () {
+			const { tokenizer, treasury, owner2 } = await deployTokenizerFixture();
 			const mintAmount = ethers.parseEther("100");
 			const burnAmount = ethers.parseEther("50");
 
 			// Mint tokens to owner2
-			await biscaTreasury.proposeMint(owner2.address, mintAmount);
-			await biscaTreasury.approveTransaction(0);
-			await biscaTreasury.connect(owner2).approveTransaction(0);
-			await biscaTreasury.executeTransaction(0);
+			await treasury.proposeMint(owner2.address, mintAmount);
+			await treasury.approveTransaction(0);
+			await treasury.connect(owner2).approveTransaction(0);
+			await treasury.executeTransaction(0);
 
 			// Propose burn transaction
-			await biscaTreasury.proposeBurn(owner2.address, burnAmount);
+			await treasury.proposeBurn(owner2.address, burnAmount);
 
 			// Execute burn transaction
 			const txId = 1; // Assuming this is the second transaction
-			await biscaTreasury.approveTransaction(txId);
-			await biscaTreasury.connect(owner2).approveTransaction(txId);
-			await biscaTreasury.executeTransaction(txId);
+			await treasury.approveTransaction(txId);
+			await treasury.connect(owner2).approveTransaction(txId);
+			await treasury.executeTransaction(txId);
 
 			// Verify balance
 			expect(await tokenizer.balanceOf(owner2.address)).to.equal(mintAmount - burnAmount);
 		});
 
 		it("Should not allow unauthorized accounts to mint tokens", async function () {
-			const { biscaTreasury, user1 } = await deployTokenizerFixture();
+			const { treasury, user1 } = await deployTokenizerFixture();
 			const mintAmount = ethers.parseEther("100");
 
 			// Attempt to propose mint from unauthorized account
 			await expect(
-				biscaTreasury.connect(user1).proposeMint(user1.address, mintAmount)
+				treasury.connect(user1).proposeMint(user1.address, mintAmount)
 			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 
 		it("Should not allow unauthorized accounts to burn tokens", async function () {
-			const { biscaTreasury, user1 } = await deployTokenizerFixture();
+			const { treasury, user1 } = await deployTokenizerFixture();
 			const mintAmount = ethers.parseEther("100");
 
 			// Attempt to propose mint from unauthorized account
 			await expect(
-				biscaTreasury.connect(user1).proposeBurn(user1.address, mintAmount)
+				treasury.connect(user1).proposeBurn(user1.address, mintAmount)
 			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 	});
@@ -238,7 +237,7 @@ describe("Tokenizer", function () {
 	
 			// Find the RandomEventTriggered event
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
 	
 			if (!event) {
@@ -279,7 +278,7 @@ describe("Tokenizer", function () {
 	
 			// Find the RandomEventTriggered event
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
 	
 			if (!event) {

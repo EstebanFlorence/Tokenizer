@@ -6,8 +6,7 @@ import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-contract VRFConsumer is VRFConsumerBaseV2Plus
-{
+contract VRFConsumer is VRFConsumerBaseV2Plus {
 	uint256 public immutable	subscriptionId;
 	bytes32	public immutable	keyHash;
 	uint32 public immutable		callbackGasLimit = 100000;
@@ -27,8 +26,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 		uint256 _subscriptionId, 
 		bytes32 _keyHash
 	)
-	VRFConsumerBaseV2Plus(_vrfCoordinator)
-	{
+	VRFConsumerBaseV2Plus(_vrfCoordinator) {
 		subscriptionId = _subscriptionId;
 		keyHash = _keyHash;
 	}
@@ -38,8 +36,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 	 * @dev Each address can only have one request in progress at a time
 	 * @return requestId The ID of the randomness request
 	 */
-	function requestRandomness() external returns (uint256 requestId)
-	{
+	function requestRandomness() external returns (uint256 requestId) {
 		requestId = s_vrfCoordinator.requestRandomWords(
 			VRFV2PlusClient.RandomWordsRequest({
 				keyHash: keyHash,
@@ -64,8 +61,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 	 * @param requestId The ID of the randomness request
 	 * @param randomWords The random result returned by the VRF Coordinator
 	 */
-	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override
-	{
+	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
 		uint256 randomness = randomWords[0];
 
 		senderToRandomness[requestIdToSender[requestId]] = randomness;
@@ -79,8 +75,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 	 * @param requestId The ID of the randomness request
 	 * @return The random value
 	 */
-	function getRandomness(uint256 requestId) external view returns (uint256)
-	{
+	function getRandomness(uint256 requestId) external view returns (uint256) {
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
 		uint256	randomness = senderToRandomness[msg.sender];
@@ -94,8 +89,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus
 	 * @dev Can only be called by the original requester
 	 * @param requestId The ID of the request to clear
 	 */
-	function clearRandomRequest(uint256 requestId) external
-	{
+	function clearRandomRequest(uint256 requestId) external {
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
 		delete requestIdToSender[requestId];

@@ -4,7 +4,7 @@ import {
 	Tokenizer__factory, Tokenizer,
 	VRFConsumer__factory, VRFConsumer,
 	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
-	BiscaTreasury__factory, BiscaTreasury
+	Treasury__factory, Treasury
 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { Log, LogDescription } from "ethers";
@@ -13,13 +13,13 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 	let tokenizer: Tokenizer;
 	let vrfConsumer: VRFConsumer;
 	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
-	let biscaTreasury: BiscaTreasury;
+	let treasury: Treasury;
 	let owner: SignerWithAddress,
 		owner2: SignerWithAddress,
 		owner3: SignerWithAddress,
 		user1: SignerWithAddress;
 	const tokenizerAddress: string = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
-	const biscaTreasuryAddress: string = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+	const treasuryAddress: string = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 
 	before(async function () {
 
@@ -34,7 +34,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
 		mockVRFCoordinator = VRFCoordinatorV2_5Mock__factory.connect(vrfCoordinatorAddress, owner);
 
-		biscaTreasury = BiscaTreasury__factory.connect(biscaTreasuryAddress, owner);
+		treasury = Treasury__factory.connect(treasuryAddress, owner);
 
 		// Create VRF Subscription
 		const tx = await mockVRFCoordinator.createSubscription();
@@ -81,14 +81,14 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		}
 	});
 
-	describe("BiscaTreasury", function () {
-		it("Should allow BiscaTreasury to mint tokens", async function () {
+	describe("Treasury", function () {
+		it("Should allow Treasury to mint tokens", async function () {
 			const mintAmount = ethers.parseEther("100");
 			const initialBalance = await tokenizer.balanceOf(owner2.address);
 			const expectedBalance = initialBalance + mintAmount;
 
 			// Propose mint transaction
-			const tx = await biscaTreasury.proposeMint(owner2.address, mintAmount);
+			const tx = await treasury.proposeMint(owner2.address, mintAmount);
 			const receipt = await tx.wait();
 
 			if (!receipt) {
@@ -97,7 +97,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Fetch the transaction ID from the emitted event
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "TransactionSubmitted");
 
 			if (!event) {
@@ -107,21 +107,21 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const txId = event?.args[0];
 
 			// Execute mint transaction
-			await biscaTreasury.approveTransaction(txId);
-			await biscaTreasury.connect(owner2).approveTransaction(txId);
-			await biscaTreasury.executeTransaction(txId);
+			await treasury.approveTransaction(txId);
+			await treasury.connect(owner2).approveTransaction(txId);
+			await treasury.executeTransaction(txId);
 
 			// Verify balance
 			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
 		});
 
-		it("Should allow BiscaTreasury to burn tokens", async function () {
+		it("Should allow Treasury to burn tokens", async function () {
 			const burnAmount = ethers.parseEther("50");
 			const initialBalance = await tokenizer.balanceOf(owner2.address);
 			const expectedBalance = initialBalance - burnAmount;
 
 			// Propose burn transaction
-			const tx = await biscaTreasury.proposeBurn(owner2.address, burnAmount);
+			const tx = await treasury.proposeBurn(owner2.address, burnAmount);
 			const receipt = await tx.wait();
 
 			if (!receipt) {
@@ -130,7 +130,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Fetch the transaction ID from the emitted event
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "TransactionSubmitted");
 
 			if (!event) {
@@ -140,9 +140,9 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 			const txId = event?.args[0];
 
 			// Execute burn transaction
-			await biscaTreasury.approveTransaction(txId);
-			await biscaTreasury.connect(owner2).approveTransaction(txId);
-			await biscaTreasury.executeTransaction(txId);
+			await treasury.approveTransaction(txId);
+			await treasury.connect(owner2).approveTransaction(txId);
+			await treasury.executeTransaction(txId);
 
 			// Verify balance
 			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
@@ -153,7 +153,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Attempt to propose mint from unauthorized account
 			await expect(
-				biscaTreasury.connect(user1).proposeMint(user1.address, mintAmount)
+				treasury.connect(user1).proposeMint(user1.address, mintAmount)
 			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 
@@ -162,7 +162,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Attempt to propose mint from unauthorized account
 			await expect(
-				biscaTreasury.connect(user1).proposeBurn(user1.address, mintAmount)
+				treasury.connect(user1).proposeBurn(user1.address, mintAmount)
 			).to.be.revertedWith("Multisig: caller is not the owner");
 		});
 	});
@@ -235,7 +235,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
 
 			if (!event) {
@@ -279,7 +279,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 			// Find the RandomEventTriggered event
 			const event = receipt?.logs
-				.map((log: Log) => biscaTreasury.interface.parseLog(log))
+				.map((log: Log) => treasury.interface.parseLog(log))
 				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
 
 			if (!event) {

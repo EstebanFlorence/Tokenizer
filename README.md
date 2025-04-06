@@ -37,15 +37,18 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install --save-dev @nomicfoundation/hardhat-toolbox
 - npm install --save-dev @openzeppelin/test-helpers
 - npx hardhat console --network localhost
-- npx hardhat test (--network localhost) [test/Tokenizer.test.js]
+- npx hardhat test --typecheck --network localhost
 
 ## Deploy
 - npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
 
 
 # Smart Contract
-Address: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
 Contract: 
+Deployer: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
+(Multisig Owners)
+Owner 2: 0x47571150cd6edab2cc682B0Ec8AdDCA46e13EBBe
+Owner 3: 0xa461A0F0f62ADe5dccf92c326a34600F78BE2e72
 
 User calls Tokenizer.triggerRandomEvent()
 ⬇ Calls

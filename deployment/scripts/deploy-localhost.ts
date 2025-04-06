@@ -1,11 +1,15 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { Contract, ContractFactory, TransactionReceipt } from "ethers";
+import {
+	/*Contract, */ContractFactory, ContractTransactionResponse,
+	Interface, LogDescription, TransactionReceipt
+} from "ethers";
 import { ethers } from "hardhat";
+import { Tokenizer, Treasury, VRFConsumer, VRFCoordinatorV2_5Mock } from "../typechain-types";
 
-interface VRFCoordinatorV2_5Mock extends Contract {}
-interface VRFConsumer extends Contract {}
-interface Tokenizer extends Contract {}
-interface BiscaTreasury extends Contract {}
+// interface VRFCoordinatorV2_5Mock extends Contract {}
+// interface VRFConsumer extends Contract {}
+// interface Tokenizer extends Contract {}
+// interface Treasury extends Contract {}
 
 async function main (): Promise<void> {
 	try {
@@ -18,7 +22,7 @@ async function main (): Promise<void> {
 
 		// Deploy VRFCoordinatorV2_5Mock
 		const VRFCoordinatorV2_5MockFactory: ContractFactory = await ethers.getContractFactory("VRFCoordinatorV2_5Mock");
-		const mockVRFCoordinator = (await VRFCoordinatorV2_5MockFactory.deploy(
+		const mockVRFCoordinator: VRFCoordinatorV2_5Mock = (await VRFCoordinatorV2_5MockFactory.deploy(
 			100000, 1e9, 6110300000000000
 		)) as VRFCoordinatorV2_5Mock;
 		await mockVRFCoordinator.waitForDeployment();
@@ -27,17 +31,17 @@ async function main (): Promise<void> {
 		console.log("Mock VRFCoordinator deployed at:", vrfCoordinatorAddress);
 
 		// Create a VRF subscription
-		const tx = await mockVRFCoordinator.createSubscription();
-		const receipt = await tx.wait() as TransactionReceipt;
+		const tx: ContractTransactionResponse = await mockVRFCoordinator.createSubscription();
+		const receipt: TransactionReceipt | null = await ethers.provider.getTransactionReceipt(tx.hash);
 
-		if (!receipt.logs || receipt.logs.length === 0) {
+		if (!receipt?.logs || receipt.logs.length === 0) {
 			throw new Error("No logs found when creating subscription.");
 		}
 
 		// Parse the first log to get the subscription ID
-		const vrfCoordinatorInterface = VRFCoordinatorV2_5MockFactory.interface;
+		const vrfCoordinatorInterface: Interface = VRFCoordinatorV2_5MockFactory.interface;
 
-		const parsedLog = vrfCoordinatorInterface.parseLog({
+		const parsedLog: LogDescription | null = vrfCoordinatorInterface.parseLog({
 			topics: receipt.logs[0].topics as string[],
 			data: receipt.logs[0].data
 		});
@@ -46,7 +50,7 @@ async function main (): Promise<void> {
 			throw new Error("Could not parse log to extract subscription ID.");
 		}
 
-		const subscriptionId = parsedLog.args?.[0];
+		const subscriptionId: bigint = parsedLog.args?.[0];
 		if (subscriptionId === undefined) {
 			throw new Error("Could not extract subscription ID from logs.");
 		}
@@ -58,7 +62,7 @@ async function main (): Promise<void> {
 		// Deploy VRFConsumer contract
 		const keyHash: string = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
 		const VRFConsumerFactory: ContractFactory = await ethers.getContractFactory('VRFConsumer');
-		const vrfConsumer = (await VRFConsumerFactory.deploy(
+		const vrfConsumer: VRFConsumer = (await VRFConsumerFactory.deploy(
 			vrfCoordinatorAddress,
 			subscriptionId, 
 			keyHash
@@ -72,7 +76,7 @@ async function main (): Promise<void> {
 		// Deploy Tokenizer contract
 		const initialSupply: bigint = ethers.parseEther("1000000");
 		const TokenizerFactory: ContractFactory = await ethers.getContractFactory('Tokenizer');
-		const tokenizer = (await TokenizerFactory.deploy(
+		const tokenizer: Tokenizer = (await TokenizerFactory.deploy(
 			initialSupply,
 			vrfConsumerAddress
 		)) as Tokenizer;
@@ -81,30 +85,30 @@ async function main (): Promise<void> {
 		const tokenizerAddress: string = await tokenizer.getAddress();
 		console.log('Tokenizer deployed at:', tokenizerAddress);
 
-		// Deploy BiscaTreasury contract
-		const BiscaTreasuryFactory: ContractFactory = await ethers.getContractFactory('BiscaTreasury');
+		// Deploy Treasury contract
+		const TreasuryFactory: ContractFactory = await ethers.getContractFactory('Treasury');
 		const owners: string[] = [deployerAddress, owner2Address, owner3Address];
 		const requiredSignatures: number = 2;
-		const biscaTreasury = (await BiscaTreasuryFactory.deploy(
+		const treasury: Treasury = (await TreasuryFactory.deploy(
 			vrfConsumerAddress,
 			tokenizerAddress,
 			owners,
 			requiredSignatures
-		)) as BiscaTreasury;
-		await biscaTreasury.waitForDeployment();
+		)) as Treasury;
+		await treasury.waitForDeployment();
 
-		const biscaTreasuryAddress: string = await biscaTreasury.getAddress();
-		console.log('BiscaTreasury deployed at:', biscaTreasuryAddress);
+		const treasuryAddress: string = await treasury.getAddress();
+		console.log('Treasury deployed at:', treasuryAddress);
 
-		// Grant MINTER_ROLE and BURNER_ROLE to BiscaTreasury
+		// Grant MINTER_ROLE and BURNER_ROLE to Treasury
 		const MINTER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
 		const BURNER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("BURNER_ROLE"));
 
-		await tokenizer.grantRole(MINTER_ROLE, biscaTreasuryAddress);
-		console.log("Granted MINTER_ROLE to BiscaTreasury");
+		await tokenizer.grantRole(MINTER_ROLE, treasuryAddress);
+		console.log("Granted MINTER_ROLE to Treasury");
 
-		await tokenizer.grantRole(BURNER_ROLE, biscaTreasuryAddress);
-		console.log("Granted BURNER_ROLE to BiscaTreasury");
+		await tokenizer.grantRole(BURNER_ROLE, treasuryAddress);
+		console.log("Granted BURNER_ROLE to Treasury");
 
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);

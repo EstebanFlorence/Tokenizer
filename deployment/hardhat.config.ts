@@ -7,7 +7,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const { API_URL, PRIVATE_KEY } = process.env;
+const { API_URL, PRIVATE_KEY, OWNER2_PRIVATE_KEY, OWNER3_PRIVATE_KEY } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 const config: HardhatUserConfig = {
@@ -53,7 +53,11 @@ const config: HardhatUserConfig = {
 		},
 		sepolia: {
 			url: "https://eth-sepolia.g.alchemy.com/v2/" + API_URL,
-			accounts: [`0x${PRIVATE_KEY}`]
+			accounts: [
+				`0x${PRIVATE_KEY}`,
+				`0x${OWNER2_PRIVATE_KEY}`,
+				`0x${OWNER3_PRIVATE_KEY}`
+			]
 		}
 	},
 

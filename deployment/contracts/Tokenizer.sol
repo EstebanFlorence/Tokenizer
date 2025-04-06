@@ -10,8 +10,8 @@ interface IVRFConsumer {
 	function getRandomness(uint256 requestId) external view returns (uint256);
 }
 
-contract Tokenizer is ERC20, Pausable, AccessControl
-{
+contract Tokenizer is ERC20, Pausable, AccessControl {
+
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 	bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 	bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -32,8 +32,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	 * @notice Fallback function to handle plain Ether transfers
 	 * @dev Emits a FallbackCalled event with the sender's address, value, and data
 	 */
-	fallback() external payable
-	{
+	fallback() external payable {
 
 		emit FallbackCalled(msg.sender, msg.value, msg.data);
 	}
@@ -42,8 +41,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	 * @notice Receive function to handle plain Ether transfers
 	 * @dev Emits a Received event with the sender's address and value
 	 */
-	receive() external payable
-	{
+	receive() external payable {
 
 		emit Received(msg.sender, msg.value);
 	}
@@ -52,8 +50,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 		uint256 initialSupply,
 		address _vrfConsumer
 	)
-	ERC20("Fiorino42", "FI")
-	{
+	ERC20("Fiorino42", "FI") {
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		_mint(_msgSender(), initialSupply);
 		lastRandomEvent = block.timestamp;
@@ -62,28 +59,23 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 		_grantRole(PAUSER_ROLE, _msgSender());
 	}
 
-	function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused
-	{
+	function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused {
 		_mint(to, amount);
 	}
 
-	function burn(address to, uint256 amount) external onlyRole(BURNER_ROLE) whenNotPaused
-	{
+	function burn(address to, uint256 amount) external onlyRole(BURNER_ROLE) whenNotPaused {
 		_burn(to, amount);
 	}
 
-	function pause() external onlyRole(PAUSER_ROLE)
-	{
+	function pause() external onlyRole(PAUSER_ROLE) {
 		_pause();
 	}
 
-	function unpause() external onlyRole(PAUSER_ROLE)
-	{
+	function unpause() external onlyRole(PAUSER_ROLE) {
 		_unpause();
 	}
 
-	function setPauser(address pauser) external onlyRole(DEFAULT_ADMIN_ROLE)
-	{
+	function setPauser(address pauser) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		_grantRole(PAUSER_ROLE, pauser);
 	}
 
@@ -92,8 +84,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	 * @dev Requests random words from the VRF consumer and stores the request ID with the caller's address.
 	 * @return requestId The ID of the random words request.
 	 */
-	function triggerRandomEvent() external whenNotPaused returns(uint256 requestId)
-	{
+	function triggerRandomEvent() external whenNotPaused returns(uint256 requestId) {
 		require(block.timestamp >= lastRandomEvent + randomInterval, "Too soon for a random event");
 
 		requestId = vrfConsumer.requestRandomness();
@@ -108,8 +99,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 	 * @dev Mints or burns tokens based on the randomness result
 	 * @param requestId The ID of the randomness request
 	 */
-	function handleRandomness(uint256 requestId) external whenNotPaused
-	{
+	function handleRandomness(uint256 requestId) external whenNotPaused {
 		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
 		uint256 randomness = vrfConsumer.getRandomness(requestId);
 		require(randomness != 0, "Randomness not available");
@@ -119,12 +109,9 @@ contract Tokenizer is ERC20, Pausable, AccessControl
 		uint256	percentage = (randomness % 5) + 1;
 		uint256	amount = (totalSupply() * percentage) / 100;
 
-		if (shouldMint)
-		{
+		if (shouldMint) {
 			_mint(requester, amount);
-		}
-		else
-		{
+		} else {
 			amount = balanceOf(requester) < amount ? balanceOf(requester) : amount;
 			_burn(requester, amount);
 		}

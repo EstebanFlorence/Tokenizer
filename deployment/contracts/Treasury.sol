@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./MultisigWallet.sol";
 import "./Tokenizer.sol";
 
-contract BiscaTreasury is MultisigWallet
-{
+contract Treasury is MultisigWallet {
+
 	IVRFConsumer public	vrfConsumer;
 	Tokenizer public tokenizer;
 
@@ -28,8 +26,7 @@ contract BiscaTreasury is MultisigWallet
 		address _tokenizer,
 		address[] memory _owners,
 		uint256 _requiredSignatures
-	) MultisigWallet(_owners, _requiredSignatures)
-	{
+	) MultisigWallet(_owners, _requiredSignatures) {
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		tokenizer = Tokenizer(payable(_tokenizer));
 	}
@@ -65,8 +62,7 @@ contract BiscaTreasury is MultisigWallet
 	 * @dev Requests random words from the VRF consumer and stores the request ID with the caller's address.
 	 * @return requestId The ID of the random words request.
 	 */
-	function triggerRandomEvent() external returns (uint256 requestId)
-	{
+	function triggerRandomEvent() external returns (uint256 requestId) {
 		requestId = vrfConsumer.requestRandomness();
 		requestIdToAddress[requestId] = msg.sender;
 		emit RandomEventTriggered(requestId, msg.sender);
@@ -77,8 +73,7 @@ contract BiscaTreasury is MultisigWallet
 	 * @dev Mints or burns tokens based on the randomness result
 	 * @param requestId The ID of the randomness request
 	 */
-	function handleRandomness(uint256 requestId) external onlyOwner
-	{
+	function handleRandomness(uint256 requestId) external onlyOwner {
 		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
 		uint256 randomness = vrfConsumer.getRandomness(requestId);
 		require(randomness != 0, "Randomness not available");
@@ -88,11 +83,9 @@ contract BiscaTreasury is MultisigWallet
 		uint256 percentage = (randomness % 5) + 1;
 		uint256 amount = (tokenizer.totalSupply() * percentage) / 100;
 
-		if (shouldMint)
-		{
+		if (shouldMint) {
 			tokenizer.mint(requester, amount);
-		} else
-		{
+		} else {
 			amount = tokenizer.balanceOf(requester) < amount ? tokenizer.balanceOf(requester) : amount;
 			tokenizer.burn(requester, amount);
 		}
