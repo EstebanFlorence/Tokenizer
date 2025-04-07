@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "hardhat-gas-reporter";
 // import "@nomiclabs/hardhat-etherscan";
 import * as dotenv from "dotenv";
 
@@ -60,7 +61,11 @@ const config: HardhatUserConfig = {
 			]
 		}
 	},
-
+	gasReporter: {
+		enabled: true,
+		currency: "USD",
+		// coinmarketcap: "YOUR_COINMARKETCAP_API_KEY", // Optional for real-time gas price
+		}
 };
 
 export default config;

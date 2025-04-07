@@ -7,8 +7,8 @@ await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 await ethers.provider.send("evm_mine");
 
 /* Get signers */
-[owner, owner2, owner3, user1] = await ethers.getSigners();
-owner.address;
+[deployer, owner2, owner3, user1] = await ethers.getSigners();
+deployer.address;
 
 /* Get a Deployed Contract Instance */
 tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
@@ -32,7 +32,7 @@ PAUSER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("PAUSER_ROLE"));
 await tokenizer.hasRole(DEFAULT_ADMIN_ROLE, deployer.address);
 await tokenizer.hasRole(MINTER_ROLE, treasury.target);
 await tokenizer.hasRole(BURNER_ROLE, treasury.target);
-await tokenizer.hasRole(PAUSER_ROLE, owner.address);
+await tokenizer.hasRole(PAUSER_ROLE, deployer.address);
 
 /* Mint tokens (requires MINTER_ROLE) */
 await tokenizer.mint(user1.address, ethers.parseEther("100"));

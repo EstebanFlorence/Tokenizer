@@ -1,15 +1,61 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
-	/*Contract, */ContractFactory, ContractTransactionResponse,
+	ContractFactory, ContractTransactionResponse,
 	Interface, LogDescription, TransactionReceipt
 } from "ethers";
 import { ethers } from "hardhat";
 import { Tokenizer, Treasury, VRFConsumer, VRFCoordinatorV2_5Mock } from "../typechain-types";
 
-// interface VRFCoordinatorV2_5Mock extends Contract {}
-// interface VRFConsumer extends Contract {}
-// interface Tokenizer extends Contract {}
-// interface Treasury extends Contract {}
+async function estimateGasCosts(
+	VRFCoordinatorV2_5MockFactory: ContractFactory,
+	VRFConsumerFactory: ContractFactory,
+	TokenizerFactory: ContractFactory,
+	TreasuryFactory: ContractFactory,
+	vrfCoordinatorAddress: string,
+	subscriptionId: bigint,
+	keyHash: string,
+	initialSupply: bigint,
+	owners: string[],
+	requiredSignatures: number,
+	deployer: SignerWithAddress
+): Promise<void> {
+	const feeData = await ethers.provider.getFeeData();
+	if (!feeData.gasPrice) {
+		throw new Error("Gas price is null or undefined.");
+	}
+	const gasPrice: bigint = feeData.gasPrice;
+	console.log("Current gas price:", ethers.formatUnits(gasPrice, "gwei"), "gwei");
+
+	// Estimate gas for VRFCoordinatorV2_5Mock deployment
+	const mockVRFCoordinatorGas = await deployer.estimateGas(
+		await VRFCoordinatorV2_5MockFactory.getDeployTransaction(100000, 1e9, 6110300000000000)
+	);
+	console.log("Estimated gas for VRFCoordinatorV2_5Mock deployment:", mockVRFCoordinatorGas.toString());
+
+	// Estimate gas for VRFConsumer deployment
+	const vrfConsumerGas = await deployer.estimateGas(
+		await VRFConsumerFactory.getDeployTransaction(vrfCoordinatorAddress, subscriptionId, keyHash)
+	);
+	console.log("Estimated gas for VRFConsumer deployment:", vrfConsumerGas.toString());
+
+	// Estimate gas for Tokenizer deployment
+	const tokenizerGas = await deployer.estimateGas(
+		await TokenizerFactory.getDeployTransaction(initialSupply, vrfCoordinatorAddress)
+	);
+	console.log("Estimated gas for Tokenizer deployment:", tokenizerGas.toString());
+
+	// Estimate gas for Treasury deployment
+	const treasuryGas = await deployer.estimateGas(
+		await TreasuryFactory.getDeployTransaction(vrfCoordinatorAddress, vrfCoordinatorAddress, owners, requiredSignatures)
+	);
+	console.log("Estimated gas for Treasury deployment:", treasuryGas.toString());
+
+	// Calculate total gas cost
+	const totalGas = mockVRFCoordinatorGas + vrfConsumerGas + tokenizerGas + treasuryGas;
+	console.log("Total estimated gas:", totalGas);
+	const estimatedCost = totalGas * gasPrice;
+	console.log("Total estimated gas cost:", ethers.formatEther(estimatedCost), "ETH");
+}
 
 async function main (): Promise<void> {
 	try {
@@ -113,6 +159,21 @@ async function main (): Promise<void> {
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 		console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
+
+		// Call the gas estimation function
+		await estimateGasCosts(
+			VRFCoordinatorV2_5MockFactory,
+			VRFConsumerFactory,
+			TokenizerFactory,
+			TreasuryFactory,
+			vrfCoordinatorAddress,
+			subscriptionId,
+			keyHash,
+			initialSupply,
+			owners,
+			requiredSignatures,
+			deployer
+		);
 
 		console.log("Deployment completed successfully.");
 

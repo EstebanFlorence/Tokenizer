@@ -1,4 +1,4 @@
-import { ContractFactory, Signer } from "ethers";
+import { ContractFactory } from "ethers";
 import { ethers } from "hardhat";
 import { Tokenizer, Treasury, VRFConsumer } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
@@ -58,6 +58,8 @@ async function main(): Promise<void> {
 
 		// Grant MINTER_ROLE and BURNER_ROLE to Treasury
 		const treasuryAddress: string = await treasury.getAddress();
+		console.log('Treasury deployed at:', treasuryAddress);
+
 		const MINTER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
 		const BURNER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("BURNER_ROLE"));
 
