@@ -81,6 +81,49 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		}
 	});
 
+	describe("Deployment", function () {
+		it("Should connect to deployed contract", async function () {
+			expect(await tokenizer.hasRole(await tokenizer.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
+		});
+	});
+
+	describe("Pausing", function () {
+		it("Should allow owner to pause and unpause the contract", async function () {
+			await tokenizer.connect(owner).pause();
+			expect(await tokenizer.paused()).to.be.true;
+			await tokenizer.connect(owner).unpause();
+			expect(await tokenizer.paused()).to.be.false;
+		});
+
+		it("Should not allow non-owner to pause or unpause the contract", async function () {
+			await expect(tokenizer.connect(owner2).pause())
+			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
+			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
+			await expect(tokenizer.connect(owner2).pause())
+			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
+			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
+		});
+
+		it("Should not allow minting when paused", async function () {
+			const mintAmount = ethers.parseEther("100");
+			await tokenizer.pause();
+			await tokenizer.grantRole((await tokenizer.MINTER_ROLE()), owner.address);
+			await expect(tokenizer.mint(owner2.address, mintAmount))
+				.to.be.revertedWithCustomError(tokenizer, "EnforcedPause");
+			await tokenizer.unpause();
+		});
+
+		it("Should allow minting when unpaused", async function () {
+			await tokenizer.pause();
+			await tokenizer.unpause();
+			const mintAmount = ethers.parseEther("100");
+			const initialBalance = await tokenizer.balanceOf(owner2.address);
+			await tokenizer.mint(owner2.address, mintAmount);
+			const expectedBalance = initialBalance + mintAmount;
+			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
+		});
+	});
+
 	describe("Treasury", function () {
 		it("Should allow Treasury to mint tokens", async function () {
 			const mintAmount = ethers.parseEther("100");
@@ -167,136 +210,4 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		});
 	});
 
-	describe("Deployment", function () {
-		it("Should connect to deployed contract", async function () {
-			expect(await tokenizer.hasRole(await tokenizer.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
-		});
-	});
-
-	describe("Pausing", function () {
-		it("Should allow owner to pause and unpause the contract", async function () {
-			await tokenizer.connect(owner).pause();
-			expect(await tokenizer.paused()).to.be.true;
-			await tokenizer.connect(owner).unpause();
-			expect(await tokenizer.paused()).to.be.false;
-		});
-
-		it("Should not allow non-owner to pause or unpause the contract", async function () {
-			await expect(tokenizer.connect(owner2).pause())
-			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
-			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
-			await expect(tokenizer.connect(owner2).pause())
-			.to.be.revertedWithCustomError(tokenizer, "AccessControlUnauthorizedAccount")
-			.withArgs(owner2.address, await tokenizer.PAUSER_ROLE());
-		});
-
-		it("Should not allow minting when paused", async function () {
-			const mintAmount = ethers.parseEther("100");
-			await tokenizer.pause();
-			await tokenizer.grantRole(await tokenizer.MINTER_ROLE(), owner.address);
-			await expect(tokenizer.mint(owner2.address, mintAmount))
-				.to.be.revertedWithCustomError(tokenizer, "EnforcedPause");
-			await tokenizer.unpause();
-		});
-
-		it("Should allow minting when unpaused", async function () {
-			await tokenizer.pause();
-			await tokenizer.unpause();
-			const mintAmount = ethers.parseEther("100");
-			const initialBalance = await tokenizer.balanceOf(owner2.address);
-			await tokenizer.mint(owner2.address, mintAmount);
-			const expectedBalance = initialBalance + mintAmount;
-			expect(await tokenizer.balanceOf(owner2.address)).to.equal(expectedBalance);
-		});
-	});
-
-	describe("Random Events", function () {
-		it("Should trigger random event", async function () {
-			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-			await ethers.provider.send("evm_mine");
-			await expect(tokenizer.connect(owner).triggerRandomEvent())
-				.to.emit(tokenizer, "RandomEventTriggered");
-		});
-
-		it("Should not allow random event before interval", async function () {
-			await expect(tokenizer.connect(owner).triggerRandomEvent()).to.be.revertedWith("Too soon for a random event");
-		});
-
-		it("Should process random words and mint tokens on even number", async function () {
-			// Trigger random event
-			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.connect(owner).triggerRandomEvent();
-			const receipt = await tx.wait();
-
-		if (!receipt) {
-			throw new Error("Transaction receipt is null");
-		}
-
-
-			const event = receipt?.logs
-				.map((log: Log) => treasury.interface.parseLog(log))
-				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
-
-			if (!event) {
-				throw new Error("TransactionSubmitted event not found in receipt logs");
-			}
-
-			// const txId = event?.args[0];
-			// Find the RandomEventTriggered event
-			// const event = receipt?.logs.find(
-			// 	(log) => log.fragment && log.fragment.name === "RandomEventTriggered"
-			// );
-
-			const requestId = event?.args ? event.args[0] : undefined;
-			// Get initial balance
-			const initialBalance = await tokenizer.balanceOf(owner.address);
-			console.log("request ID: " + requestId);
-
-			// Mock VRF response (even number → mint)
-			await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-				requestId,
-				await vrfConsumer.getAddress(),
-				[2]
-			);
-			await tokenizer.connect(owner).handleRandomness(requestId);
-
-			// Verify balance increased
-			const finalBalance = await tokenizer.balanceOf(owner.address);
-			expect(finalBalance).to.be.greaterThan(initialBalance);
-		});
-
-		it("Should process random words and burn tokens on odd number", async function () {
-			// Trigger random event
-			await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
-			await ethers.provider.send("evm_mine");
-			const tx = await tokenizer.connect(owner).triggerRandomEvent();
-			const receipt = await tx.wait();
-
-			if (!receipt) {
-				throw new Error("Transaction receipt is null");
-			}
-
-			// Find the RandomEventTriggered event
-			const event = receipt?.logs
-				.map((log: Log) => treasury.interface.parseLog(log))
-				.find((parsedLog: LogDescription | null) => parsedLog?.name === "RandomEventTriggered");
-
-			if (!event) {
-				throw new Error("TransactionSubmitted event not found in receipt logs");
-			}
-
-			const requestId = event?.args ? event.args[0] : undefined;
-			// Get initial balance
-			const initialBalance = await tokenizer.balanceOf(owner.address);
-
-			// Mock VRF response
-			await mockVRFCoordinator.fulfillRandomWordsWithOverride(requestId, vrfConsumer.target, [1]);
-			await tokenizer.connect(owner).handleRandomness(requestId);
-
-			// Verify balance changed
-			const finalBalance = await tokenizer.balanceOf(owner.address);
-			expect(finalBalance).to.be.lessThan(initialBalance);
-		});
-	});
 });

@@ -147,6 +147,7 @@ async function main (): Promise<void> {
 		console.log('Treasury deployed at:', treasuryAddress);
 
 		// Grant MINTER_ROLE and BURNER_ROLE to Treasury
+		const DEFAULT_ADMIN_ROLE: string = "0x0000000000000000000000000000000000000000000000000000000000000000";
 		const MINTER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
 		const BURNER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("BURNER_ROLE"));
 
@@ -155,6 +156,9 @@ async function main (): Promise<void> {
 
 		await tokenizer.grantRole(BURNER_ROLE, treasuryAddress);
 		console.log("Granted BURNER_ROLE to Treasury");
+
+		await tokenizer.revokeRole(DEFAULT_ADMIN_ROLE, deployerAddress);
+		console.log("Revoked DEFAULT_ADMIN_ROLE to Tokenizer Deployer");
 
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);

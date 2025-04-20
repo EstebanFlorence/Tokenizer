@@ -79,44 +79,6 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 		_grantRole(PAUSER_ROLE, pauser);
 	}
 
-	/**
-	 * @notice Triggers a random event if the required time interval has passed since the last event.
-	 * @dev Requests random words from the VRF consumer and stores the request ID with the caller's address.
-	 * @return requestId The ID of the random words request.
-	 */
-	function triggerRandomEvent() external whenNotPaused returns(uint256 requestId) {
-		require(block.timestamp >= lastRandomEvent + randomInterval, "Too soon for a random event");
 
-		requestId = vrfConsumer.requestRandomness();
-		requestIdToAddress[requestId] = msg.sender;
-		lastRandomEvent = block.timestamp;
 
-		emit RandomEventTriggered(requestId, msg.sender);
-	}
-
-	/**
-	 * @notice Handles the randomness response from the VRF consumer
-	 * @dev Mints or burns tokens based on the randomness result
-	 * @param requestId The ID of the randomness request
-	 */
-	function handleRandomness(uint256 requestId) external whenNotPaused {
-		require(msg.sender == requestIdToAddress[requestId], "Caller is not the requester");
-		uint256 randomness = vrfConsumer.getRandomness(requestId);
-		require(randomness != 0, "Randomness not available");
-
-		address	requester = requestIdToAddress[requestId];
-		bool	shouldMint = (randomness % 2) == 0;
-		uint256	percentage = (randomness % 5) + 1;
-		uint256	amount = (totalSupply() * percentage) / 100;
-
-		if (shouldMint) {
-			_mint(requester, amount);
-		} else {
-			amount = balanceOf(requester) < amount ? balanceOf(requester) : amount;
-			_burn(requester, amount);
-		}
-
-		emit RandomEventResult(requestId, shouldMint, amount);
-		delete requestIdToAddress[requestId];
-	}
 }
