@@ -23,8 +23,6 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 
 	mapping(uint256 => address)	requestIdToAddress;
 
-	event RandomEventTriggered(uint256 requestId, address indexed trigger);
-	event RandomEventResult(uint256 requestId, bool isMinted, uint256 amount);
 	event Received(address sender, uint256 amount);
 	event FallbackCalled(address sender, uint256 amount, bytes data);
 

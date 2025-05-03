@@ -4,7 +4,7 @@ import {
 	Interface, LogDescription, TransactionReceipt
 } from "ethers";
 import { ethers } from "hardhat";
-import { Tokenizer, Treasury, VRFConsumer, VRFCoordinatorV2_5Mock } from "../typechain-types";
+import { Dealer, Tokenizer, Treasury, VRFConsumer, VRFCoordinatorV2_5Mock } from "../typechain-types";
 
 async function estimateGasCosts(
 	VRFCoordinatorV2_5MockFactory: ContractFactory,
@@ -78,7 +78,9 @@ async function main (): Promise<void> {
 
 		// Create a VRF subscription
 		const tx: ContractTransactionResponse = await mockVRFCoordinator.createSubscription();
-		const receipt: TransactionReceipt | null = await ethers.provider.getTransactionReceipt(tx.hash);
+		const receipt = await tx.wait();
+
+		// const receipt: TransactionReceipt | null = await ethers.provider.getTransactionReceipt(tx.hash);
 
 		if (!receipt?.logs || receipt.logs.length === 0) {
 			throw new Error("No logs found when creating subscription.");
@@ -95,7 +97,6 @@ async function main (): Promise<void> {
 		if (!parsedLog || !parsedLog.args) {
 			throw new Error("Could not parse log to extract subscription ID.");
 		}
-
 		const subscriptionId: bigint = parsedLog.args?.[0];
 		if (subscriptionId === undefined) {
 			throw new Error("Could not extract subscription ID from logs.");
@@ -157,12 +158,26 @@ async function main (): Promise<void> {
 		await tokenizer.grantRole(BURNER_ROLE, treasuryAddress);
 		console.log("Granted BURNER_ROLE to Treasury");
 
-		await tokenizer.revokeRole(DEFAULT_ADMIN_ROLE, deployerAddress);
-		console.log("Revoked DEFAULT_ADMIN_ROLE to Tokenizer Deployer");
+		// await tokenizer.revokeRole(DEFAULT_ADMIN_ROLE, deployerAddress);
+		// console.log("Revoked DEFAULT_ADMIN_ROLE to Tokenizer Deployer");
 
 		// Add consumer to VRF
 		await mockVRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 		console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
+
+		// Deploy Dealer contract
+		const DealerFactory: ContractFactory = await ethers.getContractFactory('Dealer');
+		const dealer: Dealer = (await DealerFactory.deploy(
+			vrfConsumerAddress,
+			tokenizerAddress,
+			ethers.parseEther("500"),
+			ethers.parseEther("500000"),
+			ethers.parseEther("250")
+		)) as Dealer;
+		await dealer.waitForDeployment();
+
+		const dealerAddress: string = await dealer.getAddress();
+		console.log('Dealer deployed at:', dealerAddress);
 
 		// Call the gas estimation function
 		await estimateGasCosts(

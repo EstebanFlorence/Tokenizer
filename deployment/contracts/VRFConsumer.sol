@@ -13,7 +13,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 	uint16 public immutable		requestConfirmations = 3;
 	uint16 public immutable		numWords = 1;
 
-	uint256 private constant RANDOMNESS_IN_PROGRESS = 42;
+	uint256 private constant RANDOMNESS_IN_PROGRESS = type(uint256).max;
 
 	mapping(uint256 => address) public	requestIdToSender;
 	mapping(address => uint256) public	senderToRandomness;

@@ -11,7 +11,7 @@ describe("MultisigWallet (Using Deployed Contract)", function () {
 		owner3: SignerWithAddress,
 		nonOwner: SignerWithAddress;
 	const requiredSignatures: number = 2;
-	const multisigWalletAddress: string = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
+	const multisigWalletAddress: string = "0x9A676e781A523b5d0C0e43731313A708CB607508";
 
 	before(async function () {
 		[owner1, owner2, owner3, nonOwner] = await ethers.getSigners();

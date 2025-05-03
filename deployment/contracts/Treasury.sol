@@ -11,7 +11,7 @@ contract Treasury is MultisigWallet {
 
 	mapping(uint256 => address)	requestIdToAddress;
 
-	event RandomEventTriggered(uint256 requestId, address indexed trigger);
+	event RandomEventTriggered(uint256 requestId, address trigger);
 	event RandomEventResult(uint256 requestId);
 
 	/**
