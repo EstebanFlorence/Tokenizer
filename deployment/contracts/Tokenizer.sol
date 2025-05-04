@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 interface IVRFConsumer {
 	function requestRandomness() external returns (uint256 requestId);
+	function isRandomnessFullfilled(uint256 requestId) external view returns (bool);
 	function getRandomness(uint256 requestId) external view returns (uint256);
 }
 

@@ -13,6 +13,7 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 	uint16 public immutable		requestConfirmations = 3;
 	uint16 public immutable		numWords = 1;
 
+	enum RandomnessStatus { DOES_NOT_EXIST, IN_PROGRESS, FULFILLED }
 	uint256 private constant RANDOMNESS_IN_PROGRESS = type(uint256).max;
 
 	mapping(uint256 => address) public	requestIdToSender;
@@ -82,6 +83,11 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 		require(randomness != 0 && randomness != RANDOMNESS_IN_PROGRESS, "Randomness not available");
 
 		return randomness;
+	}
+
+	function isRandomnessFullfilled(uint256 requestId) external view returns (bool) {
+		uint256 randomness = senderToRandomness[requestIdToSender[requestId]];
+		return randomness != 0 && randomness != RANDOMNESS_IN_PROGRESS;
 	}
 
 	/**

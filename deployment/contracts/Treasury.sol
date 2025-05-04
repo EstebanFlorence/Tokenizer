@@ -12,7 +12,7 @@ contract Treasury is MultisigWallet {
 	mapping(uint256 => address)	requestIdToAddress;
 
 	event RandomEventTriggered(uint256 requestId, address trigger);
-	event RandomEventResult(uint256 requestId);
+	event RandomEventResult(uint256 randomness);
 
 	/**
 	 * @notice Initializes the Treasury with the multisig owners, required signatures,
@@ -90,7 +90,7 @@ contract Treasury is MultisigWallet {
 			tokenizer.burn(requester, amount);
 		}
 
-		emit RandomEventResult(requestId);
+		emit RandomEventResult(randomness);
 		delete requestIdToAddress[requestId];
 	}
 }

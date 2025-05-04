@@ -158,6 +158,8 @@ allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), 
 tx = await dealer.startGame(ethers.parseEther("1000"));
 receipt = await tx.wait();
 
+await dealer.getGameState(gameId);
+
 randomFilter = vrfConsumer.filters.RandomnessRequested();
 randomEvents = await vrfConsumer.queryFilter(randomFilter);
 requestId = randomEvents[randomEvents.length - 1].args[0]
@@ -169,9 +171,9 @@ await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 
 gameFilter = dealer.filters.GameCreated();
 gameEvents = await dealer.queryFilter(gameFilter);
-gameId = gameEvents[gameEvents.length - 1].args[1];
+gameId = gameEvents[gameEvents.length - 1].args[0];
 
-tx = await dealer.dealInitialCards(requestId);
+tx = await dealer.dealInitialCards(gameId);
 receipt = await tx.wait();
 
 cardFilter = dealer.filters.CardDealt();
@@ -180,17 +182,31 @@ playerCards = [
 	(cardEvents[cardEvents.length - 3].args[1]),
 	(cardEvents[cardEvents.length - 2].args[1])
 ];
-dealerCard = cardEvents[cardEvents.length - 1].args[1];
+dealerCards = [cardEvents[cardEvents.length - 1].args[1]];
 
-getCardValue(playerCards[0]);
-getCardValue(playerCards[1]);
-getCardValue(dealerCard);
-[playerCards[0], playerCards[1], dealerCard].map(card => getCardValue(card));
+playerCards.concat(dealerCards).map(getCardValue);
 
-tx = await dealer.hit();
+actionFilter = dealer.filters.PlayerAction();
+actionEvents = await dealer.queryFilter(actionFilter);
+action = actionEvents[actionEvents.length - 1].args[1];
+
+cardRequestFilter = dealer.filters.CardRequested();
+cardRequestEvents = await dealer.queryFilter(cardRequestFilter);
+cardRequestId = cardRequestEvents[cardRequestEvents.length - 1].args[1];
+
+tx = await dealer.hit(gameId);
 receipt = await tx.wait();
 
 tx = await dealer.dealHitCard(gameId);
 receipt = await tx.wait();
 
+tx = await dealer.stand(gameId);
+receipt = await tx.wait();
+
+tx = await dealer.dealDealerCard(gameId);
+receipt = await tx.wait();
+
+cardEvents = await dealer.queryFilter(cardFilter);
+playerCards.push(cardEvents[cardEvents.length - 1].args[1]);
+dealerCards.push(cardEvents[cardEvents.length - 1].args[1]);
 
