@@ -40,6 +40,7 @@ dealer = await ethers.getContractAt("Dealer", dealerAddress);
 /* Balance */
 ethers.formatEther(await ethers.provider.getBalance(deployer.address));
 ethers.formatEther(await tokenizer.balanceOf(deployer.address));
+ethers.formatEther(await tokenizer.balanceOf(dealerAddress));
 
 
 /* Check the total supply of tokens */
@@ -152,13 +153,11 @@ function getCardValue(cardNumber) {
 	return `${rank} of ${suit}`;
 }
 
-await tokenizer.approve(dealerAddress, ethers.parseEther("1000"));
+await tokenizer.approve(dealerAddress, ethers.parseEther("10000"));
 allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
 
-tx = await dealer.startGame(ethers.parseEther("1000"));
+tx = await dealer.startGame(ethers.parseEther("10000"));
 receipt = await tx.wait();
-
-await dealer.getGameState(gameId);
 
 randomFilter = vrfConsumer.filters.RandomnessRequested();
 randomEvents = await vrfConsumer.queryFilter(randomFilter);
@@ -172,6 +171,8 @@ await mockVRFCoordinator.fulfillRandomWordsWithOverride(
 gameFilter = dealer.filters.GameCreated();
 gameEvents = await dealer.queryFilter(gameFilter);
 gameId = gameEvents[gameEvents.length - 1].args[0];
+
+await dealer.getGameState(gameId);
 
 tx = await dealer.dealInitialCards(gameId);
 receipt = await tx.wait();
@@ -198,6 +199,12 @@ tx = await dealer.hit(gameId);
 receipt = await tx.wait();
 
 tx = await dealer.dealHitCard(gameId);
+receipt = await tx.wait();
+
+tx = await dealer.doubleDown(gameId);
+receipt = await tx.wait();
+
+tx = await dealer.dealDoubleDownCard(gameId);
 receipt = await tx.wait();
 
 tx = await dealer.stand(gameId);

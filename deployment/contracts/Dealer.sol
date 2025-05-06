@@ -13,7 +13,11 @@ contract Dealer {
 	// enum GameState {
 	// 	Waiting, Dealing, PlayerTurn, DealerTurn, Settled
 	// }
-	enum GameStates { WAITING_FOR_BET, WAITING_FOR_PLAYER_ACTION, GAME_COMPLETED }
+	enum GameStates { 
+		WAITING_FOR_BET, GAME_COMPLETED, 
+		WAITING_FOR_PLAYER_ACTION, WAITING_FOR_DEALER_ACTION, 
+		WAITING_FOR_PLAYER_RANDOMNESS, WAITING_FOR_DEALER_RANDOMNESS
+	}
 	enum PlayerActions { HIT, STAND, DOUBLE_DOWN }
 	enum GameResults { IN_PROGRESS, PLAYER_WIN, DEALER_WIN, PUSH }
 
@@ -29,7 +33,6 @@ contract Dealer {
 		bool	playerHasBlackjack;
 		bool	dealerHasBlackjack;
 		bool	playerHasSplit;
-		bool	isDealerTurn;
 		bool	isActive;
 		GameStates	state;
 		GameResults result;
@@ -76,13 +79,11 @@ contract Dealer {
 	}
 
 	function startGame(uint256 bet) external {
-		// require(!games[gameId].isActive, "Game already in progress");
 		require(bet >= minBet && bet <= maxBet, "Bet outside allowed range");
 		require(tokenizer.transferFrom(msg.sender, address(this), bet), "Token transfer failed");
 
 		// Request randomness for initial cards
 		uint256 requestId = vrfConsumer.requestRandomness();
-		// requestIdToPlayer[requestId] = msg.sender;
 		gamesCount++;
 
 		// Initialize game
@@ -92,7 +93,6 @@ contract Dealer {
 		game.requestId = requestId;
 		game.state = GameStates.WAITING_FOR_BET;
 		game.result = GameResults.IN_PROGRESS;
-		game.isDealerTurn = false;
 		game.isActive = true;
 
 		emit GameCreated(gamesCount, msg.sender, bet);
@@ -100,16 +100,9 @@ contract Dealer {
 
 	function dealInitialCards(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId) {
 		Game storage game = games[gameId];
-		// require(game.requestId == requestId, "Invalid request ID");
 		require(game.state == GameStates.WAITING_FOR_BET, "Game not in correct state");
 		address player = game.player;
-		// address player = requestIdToPlayer[requestId];
-		// require(player != address(0), "Invalid request ID");
-		// require(games[player].state == GameStates.WAITING_FOR_BET, "Game not in correct state");
 
-		// Game storage game = games[player];
-
-		// Get randomness
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 
 		// Deal initial cards (2 for player, 1 for dealer)
@@ -122,17 +115,13 @@ contract Dealer {
 		randomness = uint256(keccak256(abi.encode(randomness, 2)));
 		game.dealerCards[0] = uint8((randomness % 52) + 1);
 
-		// Calculate scores
 		game.playerScore = calculateScore(game.playerCards);
 		game.dealerScore = calculateScore(game.dealerCards);
 
-		// Check for blackjack
 		game.playerHasBlackjack = (game.playerCards.length == 2 && game.playerScore == 21);
 
-		// Update game state
 		game.state = GameStates.WAITING_FOR_PLAYER_ACTION;
 
-		// Emit events
 		emit CardDealt(player, game.playerCards[0], true);
 		emit CardDealt(player, game.playerCards[1], true);
 		emit CardDealt(player, game.dealerCards[0], false);
@@ -150,12 +139,13 @@ contract Dealer {
 		Game storage game = games[gameId];
 		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not your turn");
 
-		// Request randomness for the new card
-		uint256 requestId = vrfConsumer.requestRandomness();
-		// requestIdToPlayer[requestId] = msg.sender;
-		game.requestId = requestId;
-
 		emit PlayerAction(msg.sender, PlayerActions.HIT);
+
+		uint256 requestId = vrfConsumer.requestRandomness();
+		game.requestId = requestId;
+		game.state = GameStates.WAITING_FOR_PLAYER_RANDOMNESS;
+
+		emit CardRequested(requestId, msg.sender);
 	}
 
 	/**
@@ -163,28 +153,29 @@ contract Dealer {
 	 */
 	function dealHitCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId) {
 		Game storage game = games[gameId];
-		// require(game.requestId == requestId, "Invalid request ID");
-		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
+		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player action");
 		address player = game.player;
-		// address player = requestIdToPlayer[requestId];
-		// require(player != address(0), "Invalid request ID");
-		// require(games[player].state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
-		
-		// Game storage game = games[player];
-		
-		// Get randomness
+
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 
-		// Deal a new card to the player
 		uint8 newCard = uint8((randomness % 52) + 1);
 		game.playerCards.push(newCard);
 		game.playerScore = calculateScore(game.playerCards);
 
 		emit CardDealt(player, newCard, true);
 
+		game.state = GameStates.WAITING_FOR_PLAYER_ACTION;
+
 		// Check if player busts
 		if (game.playerScore > 21) {
 			game.result = GameResults.DEALER_WIN;
+			completeGame(gameId);
+		}
+
+		// Check if player has blackjack
+		if (game.playerScore == 21) {
+			game.playerHasBlackjack = true;
+			game.result = GameResults.PLAYER_WIN;
 			completeGame(gameId);
 		}
 	}
@@ -199,7 +190,6 @@ contract Dealer {
 		emit PlayerAction(msg.sender, PlayerActions.STAND);
 		
 		// Complete the game (dealer's turn)
-		// completeGame(msg.sender);
 		startDealerTurn(gameId);
 	}
 	
@@ -212,15 +202,15 @@ contract Dealer {
 		require(game.playerCards.length == 2, "Can only double down on initial hand");
 		require(tokenizer.transferFrom(msg.sender, address(this), game.bet), "Token transfer failed");
 		
-		// Double the bet
 		game.bet *= 2;
 		
 		emit PlayerAction(msg.sender, PlayerActions.DOUBLE_DOWN);
 		
-		// Request randomness for the new card
 		uint256 requestId = vrfConsumer.requestRandomness();
-		// requestIdToPlayer[requestId] = msg.sender;
 		game.requestId = requestId;
+		game.state = GameStates.WAITING_FOR_PLAYER_RANDOMNESS;
+
+		emit CardRequested(requestId, msg.sender);
 	}
 
 	/**
@@ -228,34 +218,25 @@ contract Dealer {
 	 */
 	function dealDoubleDownCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId) {
 		Game storage game = games[gameId];
-		// require(game.requestId == requestId, "Invalid request ID");
 		address player = game.player;
-		// address player = requestIdToPlayer[requestId];
-		// require(player != address(0), "Invalid request ID");
+
+		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player action");
 		
-		// Game storage game = games[player];
-		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
-		
-		// Get randomness
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 		
-		// Deal a new card to the player
 		uint8 newCard = uint8((randomness % 52) + 1);
 		game.playerCards.push(newCard);
 		
-		// Recalculate score
 		game.playerScore = calculateScore(game.playerCards);
 		
 		emit CardDealt(player, newCard, true);
 		
-		// Complete the game (player's turn is over)
 		completeGame(gameId);
 	}
 
 	function startDealerTurn(uint256 gameId) internal {
 		Game storage game = games[gameId];
-		game.isDealerTurn = true;
-		game.state = GameStates.WAITING_FOR_PLAYER_ACTION;
+		game.state = GameStates.WAITING_FOR_DEALER_ACTION;
 
 		uint256 requestId = vrfConsumer.requestRandomness();
 		game.requestId = requestId;
@@ -265,14 +246,11 @@ contract Dealer {
 
 	function dealDealerCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId) {
 		Game storage game = games[gameId];
-		require(game.isDealerTurn, "Not dealer turn");
-		// require(game.requestId == requestId, "Invalid request ID");
+		require(game.state == GameStates.WAITING_FOR_DEALER_ACTION, "Not dealer turn");
 
-		// Get randomness
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 		uint8 newCard = uint8((randomness % 52) + 1);
 
-		// Add card to dealer
 		game.dealerCards.push(newCard);
 		game.dealerScore = calculateScore(game.dealerCards);
 
@@ -285,7 +263,6 @@ contract Dealer {
 			game.requestId = newRequestId;
 			emit CardRequested(newRequestId, address(this));
 		} else {
-			game.isDealerTurn = false;
 			finishGame(gameId);
 		}
 	}
