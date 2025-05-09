@@ -10,6 +10,7 @@ export async function estimateGasCosts(
 	DealerFactory: ContractFactory,
 	vrfCoordinatorAddress: string,
 	tokenizerAddress: string,
+	treasuryAddress: string,
 	subscriptionId: bigint,
 	keyHash: string,
 	initialSupply: bigint,
@@ -50,7 +51,7 @@ export async function estimateGasCosts(
 
 	// Estimate gas for Dealer deployment
 	const dealerGas = await deployer.estimateGas(
-		await DealerFactory.getDeployTransaction(vrfCoordinatorAddress, tokenizerAddress, ethers.parseEther("500"), ethers.parseEther("500000"), ethers.parseEther("250"))
+		await DealerFactory.getDeployTransaction(vrfCoordinatorAddress, tokenizerAddress, treasuryAddress, ethers.parseEther("500"), ethers.parseEther("500000"), 250)
 	);
 	console.log("Estimated gas for Dealer deployment:", dealerGas.toString());
 

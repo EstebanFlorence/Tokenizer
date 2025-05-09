@@ -2,6 +2,9 @@
 pragma solidity ^0.8.6;
 
 import "./Tokenizer.sol";
+import "./Treasury.sol";
+
+import "hardhat/console.sol";
 
 contract Dealer {
 
@@ -10,9 +13,6 @@ contract Dealer {
 	uint256 public houseEdge; // in basis points (1/100 of a percent), 250 = 2.5%
 	uint256 public gamesCount;
 
-	// enum GameState {
-	// 	Waiting, Dealing, PlayerTurn, DealerTurn, Settled
-	// }
 	enum GameStates { 
 		WAITING_FOR_BET, GAME_COMPLETED, 
 		WAITING_FOR_PLAYER_ACTION, WAITING_FOR_DEALER_ACTION, 
@@ -26,6 +26,7 @@ contract Dealer {
 		address	player;
 		uint256	bet;
 		uint256	requestId;
+		uint256 usedCards; // Bitmap to track used cards (1-52)
 		uint8[]	playerCards;
 		uint8[]	dealerCards;
 		uint8	playerScore;
@@ -35,13 +36,10 @@ contract Dealer {
 		bool	playerHasSplit;
 		bool	isActive;
 		GameStates	state;
-		GameResults result;
+		GameResults	result;
 	}
 
 	mapping(uint256 => Game) games;
-	// mapping(address => Game) games;
-	// mapping(uint256 => address)	requestIdToPlayer;
-	// mapping(uint256 => uint256) public vrfToGame;
 
 	event GameCreated(uint256 gameId, address player, uint256 bet);
 	event CardRequested(uint256 requestId, address trigger);
@@ -51,16 +49,20 @@ contract Dealer {
 
 	IVRFConsumer public	vrfConsumer;
 	Tokenizer public tokenizer;
+	Treasury private treasury;
 
 	constructor(
 		address _vrfConsumer,
 		address _tokenizer,
+		address _treasury,
 		uint256 _minBet,
 		uint256 _maxBet,
 		uint256 _houseEdge
 	) {
+		require(_houseEdge <= 1000, "House edge cannot exceed 10% (1000 bps)");
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		tokenizer = Tokenizer(payable(_tokenizer));
+		treasury = Treasury(payable(_treasury));
 		minBet = _minBet;
 		maxBet = _maxBet;
 		houseEdge = _houseEdge;
@@ -91,6 +93,7 @@ contract Dealer {
 		game.player = msg.sender;
 		game.bet = bet;
 		game.requestId = requestId;
+		// game.usedCards = 0;
 		game.state = GameStates.WAITING_FOR_BET;
 		game.result = GameResults.IN_PROGRESS;
 		game.isActive = true;
@@ -102,18 +105,29 @@ contract Dealer {
 		Game storage game = games[gameId];
 		require(game.state == GameStates.WAITING_FOR_BET, "Game not in correct state");
 		address player = game.player;
+		uint8 card;
 
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 
 		// Deal initial cards (2 for player, 1 for dealer)
 		game.playerCards = new uint8[](2);
 		game.dealerCards = new uint8[](1);
+		card = getUniqueCard(randomness, game.usedCards);
+		game.playerCards[0] = card;
+		game.usedCards |= (uint256(1) << (card - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
-		game.playerCards[0] = uint8((randomness % 52) + 1);
 		randomness = uint256(keccak256(abi.encode(randomness, 1)));
-		game.playerCards[1] = uint8((randomness % 52) + 1);
+		card = getUniqueCard(randomness, game.usedCards);
+		game.playerCards[1] = card;
+		game.usedCards |= (uint256(1) << (card - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, card);
+
 		randomness = uint256(keccak256(abi.encode(randomness, 2)));
-		game.dealerCards[0] = uint8((randomness % 52) + 1);
+		card = getUniqueCard(randomness, game.usedCards);
+		game.dealerCards[0] = card;
+		game.usedCards |= (uint256(1) << (card - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		game.playerScore = calculateScore(game.playerCards);
 		game.dealerScore = calculateScore(game.dealerCards);
@@ -158,8 +172,11 @@ contract Dealer {
 
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 
-		uint8 newCard = uint8((randomness % 52) + 1);
+		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
+		game.usedCards |= (uint256(1) << (newCard - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
+
 		game.playerScore = calculateScore(game.playerCards);
 
 		emit CardDealt(player, newCard, true);
@@ -224,11 +241,12 @@ contract Dealer {
 		
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 		
-		uint8 newCard = uint8((randomness % 52) + 1);
+		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
-		
+		game.usedCards |= (uint256(1) << (newCard - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.playerScore = calculateScore(game.playerCards);
-		
+
 		emit CardDealt(player, newCard, true);
 		
 		completeGame(gameId);
@@ -249,9 +267,11 @@ contract Dealer {
 		require(game.state == GameStates.WAITING_FOR_DEALER_ACTION, "Not dealer turn");
 
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
-		uint8 newCard = uint8((randomness % 52) + 1);
 
+		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.dealerCards.push(newCard);
+		game.usedCards |= (uint256(1) << (newCard - 1));
+		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.dealerScore = calculateScore(game.dealerCards);
 
 		emit CardDealt(address(this), newCard, false);
@@ -275,7 +295,7 @@ contract Dealer {
 		if (game.dealerCards.length == 2 && game.dealerScore == 21) {
 			game.dealerHasBlackjack = true;
 		}
-		
+
 		// Determine result if not already set
 		if (game.result == GameResults.IN_PROGRESS) {
 			if (game.playerHasBlackjack && !game.dealerHasBlackjack) {
@@ -296,9 +316,11 @@ contract Dealer {
 				game.result = GameResults.PUSH; // Equal scores = push
 			}
 		}
-		
+
 		// Calculate and pay winnings
-		uint256 payout = 0;
+		uint256 payout;
+		uint256 houseEarnings;
+
 		if (game.result == GameResults.PLAYER_WIN) {
 			if (game.playerHasBlackjack) {
 				// Blackjack typically pays 3:2
@@ -306,11 +328,31 @@ contract Dealer {
 			} else {
 				payout = game.bet * 2; // Even money (1:1)
 			}
+
+
+
+
+			// Deduct house edge from winnings
+			houseEarnings = (payout - game.bet) * houseEdge / 10000; // Apply house edge to winnings
+
+
+			payout -= houseEarnings;
+
+
+			// Transfer winnings to the player
 			tokenizer.transfer(player, payout);
+
+			// Transfer house earnings + a portion of the bet to the treasury
+			uint256 treasuryShare = game.bet * houseEdge / 10000; // House edge on the bet
+			tokenizer.transfer(address(treasury), (houseEarnings + treasuryShare));
+
 		} else if (game.result == GameResults.PUSH) {
 			// Return original bet
 			payout = game.bet;
 			tokenizer.transfer(player, payout);
+		} else if (game.result == GameResults.DEALER_WIN) {
+			// Transfer the entire bet to the treasury
+			tokenizer.transfer(address(treasury), game.bet);
 		}
 
 		// Update game state
@@ -319,9 +361,7 @@ contract Dealer {
 		emit GameResult(player, game.result, payout);
 
 		// Clean up
-		// delete requestIdToPlayer[game.requestId];
 		game.isActive = false;
-	
 	}
 
 	/**
@@ -343,35 +383,34 @@ contract Dealer {
 	 * @param cards The array of card values
 	 * @return score The blackjack score
 	 */
-	function calculateScore(uint8[] memory cards) internal pure returns (uint8 score) {
+	function calculateScore(uint8[] memory cards) internal pure returns (uint8) {
+		// Use 16 bits to accumulate, then downcast
+		uint16 rawScore = 0;
+		uint8  aceCount = 0;
 
-		score = 0;
-		uint8 aceCount = 0;
-		
 		for (uint i = 0; i < cards.length; i++) {
-			uint8 cardValue = (cards[i] - 1) % 13 + 1; // Convert to 1-13 range
-
-			if (cardValue == 1) {
-				// Ace
+			uint8 v = (cards[i] - 1) % 13 + 1;
+			if (v == 1) {
 				aceCount++;
-				score += 11;
-			} else if (cardValue >= 10) {
-				// Face cards (10, J, Q, K)
-				score += 10;
+				rawScore += 11;
+			} else if (v >= 10) {
+				rawScore += 10;
 			} else {
-				// Number cards (2-9)
-				score += cardValue;
+				rawScore += v;
 			}
 		}
-		
-		// Adjust for aces if score is over 21
-		while (score > 21 && aceCount > 0) {
-			score -= 10; // Change one ace from 11 to 1
+
+		// Adjust Aces
+		while (rawScore > 21 && aceCount > 0) {
+			rawScore -= 10;
 			aceCount--;
 		}
-		
-		return score;
+
+
+		// guaranteed to fit in uint8 for any realistic hand
+		return uint8(rawScore);
 	}
+
 
 	/**
 	 * @notice Get a player's current game state
@@ -434,4 +473,58 @@ contract Dealer {
 		tokenizer.transfer(recipient, amount);
 	}
 
+	/**
+	 * @notice Get a unique card that hasn't been used before
+	 * @param randomness The source of randomness
+	 * @param usedCardsBitmap Bitmap of used cards
+	 * @return A unique card value between 1-52
+	 */
+	function getUniqueCard(uint256 randomness, uint256 usedCardsBitmap) internal pure returns (uint8) {
+		// Maximum attempts to find an unused card
+		uint8 maxAttempts = 52;
+		
+		for (uint8 i = 0; i < maxAttempts; i++) {
+			// Generate a card between 1-52
+			uint8 card = uint8((randomness % 52) + 1);
+			
+			// Check if the card is unused
+			if (!isCardUsed(usedCardsBitmap, card)) {
+				return card;
+			}
+			
+			// Try a different card
+			randomness = uint256(keccak256(abi.encode(randomness, i)));
+		}
+		
+		// Fallback if somehow all cards are marked as used (shouldn't happen in normal play)
+		// In a real implementation, we might want to handle this differently
+		revert("All cards used - deck exhausted");
+	}
+	
+	/**
+	 * @notice Check if a card has been used
+	 * @param usedCardsBitmap Bitmap of used cards
+	 * @param card The card value to check (1-52)
+	 * @return Whether the card has been used
+	 */
+	function isCardUsed(uint256 usedCardsBitmap, uint8 card) internal pure returns (bool) {
+		// Cards are 1-52, but bitmap is 0-based, so subtract 1
+		uint256 bitPosition = uint256(card) - 1;
+		
+		// Check if the bit is set
+		return (usedCardsBitmap & (uint256(1) << bitPosition)) != 0;
+	}
+	
+	/**
+	 * @notice Mark a card as used in the bitmap
+	 * @param usedCardsBitmap Bitmap of used cards
+	 * @param card The card value to mark (1-52)
+	 */
+	function markCardAsUsed(uint256 usedCardsBitmap, uint8 card) internal pure returns(uint256) {
+		// Cards are 1-52, but bitmap is 0-based, so subtract 1
+		uint256 bitPosition = uint256(card) - 1;
+		
+		// Set the bit
+		return usedCardsBitmap | (uint256(1) << bitPosition);
+	}
 }

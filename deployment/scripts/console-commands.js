@@ -7,6 +7,7 @@ await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 await ethers.provider.send("evm_mine");
 
 
+
 /* Get signers */
 [deployer, owner2, owner3, user1] = await ethers.getSigners();
 
@@ -41,6 +42,7 @@ dealer = await ethers.getContractAt("Dealer", dealerAddress);
 ethers.formatEther(await ethers.provider.getBalance(deployer.address));
 ethers.formatEther(await tokenizer.balanceOf(deployer.address));
 ethers.formatEther(await tokenizer.balanceOf(dealerAddress));
+ethers.formatEther(await tokenizer.balanceOf(treasuryAddress));
 
 
 /* Check the total supply of tokens */
@@ -153,7 +155,7 @@ function getCardValue(cardNumber) {
 	return `${rank} of ${suit}`;
 }
 
-await tokenizer.approve(dealerAddress, ethers.parseEther("10000"));
+await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
 allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
 
 tx = await dealer.startGame(ethers.parseEther("10000"));
@@ -213,7 +215,16 @@ receipt = await tx.wait();
 tx = await dealer.dealDealerCard(gameId);
 receipt = await tx.wait();
 
+randomEvents = await vrfConsumer.queryFilter(randomFilter);
+requestId = randomEvents[randomEvents.length - 1].args[0]
+await mockVRFCoordinator.fulfillRandomWordsWithOverride(
+	requestId,
+	vrfConsumerAddress,
+	[BigInt('0x' + crypto.getRandomValues(new Uint32Array(8)).reduce((acc, n) => acc + n.toString(16).padStart(8, '0'), ''))]
+);
+
 cardEvents = await dealer.queryFilter(cardFilter);
 playerCards.push(cardEvents[cardEvents.length - 1].args[1]);
 dealerCards.push(cardEvents[cardEvents.length - 1].args[1]);
-
+playerCards.concat(dealerCards).map(getCardValue);
+await dealer.getGameState(gameId);

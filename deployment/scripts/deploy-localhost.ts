@@ -120,9 +120,10 @@ async function main (): Promise<void> {
 		const dealer: Dealer = (await DealerFactory.deploy(
 			vrfConsumerAddress,
 			tokenizerAddress,
+			treasuryAddress,
 			ethers.parseEther("500"),
 			ethers.parseEther("500000"),
-			ethers.parseEther("250")
+			250
 		)) as Dealer;
 		await dealer.waitForDeployment();
 
@@ -144,6 +145,7 @@ async function main (): Promise<void> {
 			DealerFactory,
 			vrfCoordinatorAddress,
 			tokenizerAddress,
+			treasuryAddress,
 			subscriptionId,
 			keyHash,
 			initialSupply,
