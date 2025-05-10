@@ -4,8 +4,6 @@ pragma solidity ^0.8.6;
 import "./Tokenizer.sol";
 import "./Treasury.sol";
 
-import "hardhat/console.sol";
-
 contract Dealer {
 
 	uint256 public minBet;
@@ -115,19 +113,16 @@ contract Dealer {
 		card = getUniqueCard(randomness, game.usedCards);
 		game.playerCards[0] = card;
 		game.usedCards |= (uint64(1) << (card - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		randomness = uint256(keccak256(abi.encode(randomness, 1)));
 		card = getUniqueCard(randomness, game.usedCards);
 		game.playerCards[1] = card;
 		game.usedCards |= (uint64(1) << (card - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		randomness = uint256(keccak256(abi.encode(randomness, 2)));
 		card = getUniqueCard(randomness, game.usedCards);
 		game.dealerCards[0] = card;
 		game.usedCards |= (uint64(1) << (card - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		game.playerScore = calculateScore(game.playerCards);
 		game.dealerScore = calculateScore(game.dealerCards);
@@ -175,7 +170,6 @@ contract Dealer {
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
 		game.usedCards |= (uint64(1) << (newCard - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 
 		game.playerScore = calculateScore(game.playerCards);
 
@@ -195,6 +189,7 @@ contract Dealer {
 			game.result = GameResults.PLAYER_WIN;
 			completeGame(gameId);
 		}
+		
 	}
 
 	/**
@@ -244,10 +239,22 @@ contract Dealer {
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
 		game.usedCards |= (uint64(1) << (newCard - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.playerScore = calculateScore(game.playerCards);
 
 		emit CardDealt(player, newCard, true);
+
+		game.state = GameStates.WAITING_FOR_PLAYER_ACTION;
+
+		// Check if player busts
+		if (game.playerScore > 21) {
+			game.result = GameResults.DEALER_WIN;
+		}
+
+		// Check if player has blackjack
+		if (game.playerScore == 21) {
+			game.playerHasBlackjack = true;
+			game.result = GameResults.PLAYER_WIN;
+		}
 		
 		completeGame(gameId);
 	}
@@ -271,7 +278,6 @@ contract Dealer {
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.dealerCards.push(newCard);
 		game.usedCards |= (uint64(1) << (newCard - 1));
-		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.dealerScore = calculateScore(game.dealerCards);
 
 		emit CardDealt(address(this), newCard, false);
@@ -329,15 +335,10 @@ contract Dealer {
 				payout = game.bet * 2; // Even money (1:1)
 			}
 
-
-
-
 			// Deduct house edge from winnings
 			houseEarnings = (payout - game.bet) * houseEdge / 10000; // Apply house edge to winnings
 
-
 			payout -= houseEarnings;
-
 
 			// Transfer winnings to the player
 			tokenizer.transfer(player, payout);
@@ -514,17 +515,5 @@ contract Dealer {
 		// Check if the bit is set
 		return (usedCardsBitmap & (uint64(1) << bitPosition)) != 0;
 	}
-	
-	/**
-	 * @notice Mark a card as used in the bitmap
-	 * @param usedCardsBitmap Bitmap of used cards
-	 * @param card The card value to mark (1-52)
-	 */
-	function markCardAsUsed(uint64 usedCardsBitmap, uint8 card) internal pure returns(uint64) {
-		// Cards are 1-52, but bitmap is 0-based, so subtract 1
-		uint64 bitPosition = uint64(card) - 1;
-		
-		// Set the bit
-		return usedCardsBitmap | (uint64(1) << bitPosition);
-	}
+
 }

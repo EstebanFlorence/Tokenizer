@@ -18,7 +18,7 @@ async function getContracts(isLocalhost) {
 	if (isLocalhost) {
 		tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 	} else {
-		tokenizerAddress = "0x4DfFf400ca6cd6f38286baa1cF8CbD6e139d8715";
+		tokenizerAddress = "0xC1510A0839eCbA01a057b2D5447F8e64E88A2b35";
 	}
 	tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
 	
@@ -31,14 +31,14 @@ async function getContracts(isLocalhost) {
 	if (isLocalhost) {
 		treasuryAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 	} else {
-		treasuryAddress = "0xF7ce95980a7CdC2ECcec0Fe7E9Fd449dB16bB323";
+		treasuryAddress = "0xA7a0134a5aC5324621259062178652Fc0927530c";
 	}
 	treasury = await ethers.getContractAt("Treasury", treasuryAddress);
 	
 	if (isLocalhost) {
 		dealerAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
 	} else {
-		dealerAddress = "0xD6ed3723ebe7Cc9d965F8346B00119BCcB233Ba0";
+		dealerAddress = "0x6d79ae1789eD18a276b7bAFb12Ecf5E2878bCDa6";
 	}
 	dealer = await ethers.getContractAt("Dealer", dealerAddress);
 
@@ -92,7 +92,7 @@ async function testPause() {
 	
 	/* Mint tokens (requires MINTER_ROLE) */
 	await tokenizer.mint(user1.address, ethers.parseEther("100"));
-	await treasury.proposeMint(user1.address, ethers.parseEther("42"));
+	await treasury.proposeMint(dealerAddress, ethers.parseEther("42000"));
 	
 	/* Burn tokens (requires BURNER_ROLE) */
 	await tokenizer.burn(user1.address, ethers.parseEther("50"));
@@ -188,12 +188,6 @@ async function getMockRandomness() {
 	);
 }
 
-
-async function approveDealer() {
-	await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
-	allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
-}
-
 async function getRandomness(isLocalhost) {
 	randomFilter = vrfConsumer.filters.RandomnessRequested();
 	randomEvents = await vrfConsumer.queryFilter(randomFilter);
@@ -205,6 +199,12 @@ async function getRandomness(isLocalhost) {
 }
 
 
+async function approveDealer() {
+	await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
+	await tx.wait();
+	console.log(allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress())));
+}
+
 async function startGame(isLocalhost) {
 	tx = await dealer.startGame(ethers.parseEther("1000"));
 	receipt = await tx.wait();
@@ -215,9 +215,9 @@ async function startGame(isLocalhost) {
 	gameEvents = await dealer.queryFilter(gameFilter);
 	gameId = gameEvents[gameEvents.length - 1].args[0];
 	
+	console.log("Game ID: ", gameId);
 	console.log(await dealer.getGameState(gameId));
 }
-
 
 async function dealInitialCards() {
 	tx = await dealer.dealInitialCards(gameId);
@@ -232,7 +232,6 @@ async function getAction() {
 	actionEvents = await dealer.queryFilter(actionFilter);
 	action = actionEvents[actionEvents.length - 1].args[1];
 }
-
 
 async function getCardRequest() {
 	cardRequestFilter = dealer.filters.CardRequested();
@@ -263,9 +262,8 @@ async function getCardDealt(toPlayer, isStart) {
 async function hit(isLocalhost) {
 	tx = await dealer.hit(gameId);
 	receipt = await tx.wait();
-	getRandomness(isLocalhost);
+	await getRandomness(isLocalhost);
 }
-
 
 async function dealHitCard() {
 	tx = await dealer.dealHitCard(gameId);
@@ -273,13 +271,11 @@ async function dealHitCard() {
 	await getCardDealt(true, false);
 }
 
-
 async function doubleDown(isLocalhost) {
 	tx = await dealer.doubleDown(gameId);
 	receipt = await tx.wait();
-	getRandomness(isLocalhost);
+	await getRandomness(isLocalhost);
 }
-
 
 async function dealDoubleDownCard() {
 	tx = await dealer.dealDoubleDownCard(gameId);
@@ -287,13 +283,11 @@ async function dealDoubleDownCard() {
 	await getCardDealt(true, false);
 }
 
-
 async function stand(isLocalhost) {
 	tx = await dealer.stand(gameId);
 	receipt = await tx.wait();
 	await getRandomness(isLocalhost);
 }
-
 
 async function dealDealerCard() {
 	tx = await dealer.dealDealerCard(gameId);
@@ -301,7 +295,8 @@ async function dealDealerCard() {
 	await getCardDealt(false, false);
 }
 
-async function play() {
+
+async function playLocal() {
 	/* Start */
 	await getSigners();
 	await getContracts(true);
@@ -336,16 +331,38 @@ async function play() {
 	await getRandomness(true);
 }
 
+async function playSepolia() {
+	/* Start */
+	await getSigners();
+	await getContracts(false);
+	/* Test */
+	await testRoles();
+	await testPause();
+	await testMultisig();
+	await testRequest();
+	await testTrigger();
 
-/* 
-randomEvents = await vrfConsumer.queryFilter(randomFilter);
-requestId = randomEvents[randomEvents.length - 1].args[0]
-await getMockRandomness();
+	/* Utils */
+	await getArtifact();
+	await sendEthToOwners();
+	await getAction();
+	await getCardRequest();
+	await getBalances();
+	isFulfilled = await vrfConsumer.isRandomnessFullfilled(requestId);
 
-cardDealtEvents = await dealer.queryFilter(cardDealtFilter);
-playerCards.push(cardDealtEvents[cardDealtEvents.length - 1].args[1]);
-dealerCards.push(cardDealtEvents[cardDealtEvents.length - 1].args[1]);
-playerCards.concat(dealerCards).map(getCardValue);
-await dealer.getGameState(gameId);
-await getCardDealt();
- */
+	/* Blackjack */
+	await approveDealer();
+	await startGame(false);
+	await dealInitialCards();
+
+	await hit(false);
+	await dealHitCard();
+
+	await doubleDown(false);
+	await dealDoubleDownCard();
+
+	await stand(false);
+
+	await dealDealerCard();
+	await getRandomness(false);
+}

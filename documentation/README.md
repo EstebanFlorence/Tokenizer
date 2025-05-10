@@ -44,23 +44,28 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
 
 Deploying contract with the account: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
-vrfConsumer deployed at: 0xbAF70C4f7C0Ce4D13efB82743E0Aa2780e1c5B80
+vrfConsumer deployed at: 0x9cEBd1c4F3bf5C68f5f2d417EDf9Ed0aE6d95B6A
 vrfConsumer's coordinator address: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
-Tokenizer deployed at: 0x4DfFf400ca6cd6f38286baa1cF8CbD6e139d8715
-Treasury deployed at: 0xF7ce95980a7CdC2ECcec0Fe7E9Fd449dB16bB323
+Tokenizer deployed at: 0xC1510A0839eCbA01a057b2D5447F8e64E88A2b35
+Treasury deployed at: 0xA7a0134a5aC5324621259062178652Fc0927530c
 Granted MINTER_ROLE to Treasury
 Granted BURNER_ROLE to Treasury
 Added Tokenizer's vrfConsumer as a VRF consumer.
-Dealer deployed at: 0xD6ed3723ebe7Cc9d965F8346B00119BCcB233Ba0
+Dealer deployed at: 0x6d79ae1789eD18a276b7bAFb12Ecf5E2878bCDa6
+
 
 Tx Hashes:
-- 0x0700c20f90aee68009439c227b9c78289811c6211fac9c3e2b929b1765c6141a
-- 0x1c3c3c275500a87b5ccb359fbbf209b359805f5cea8c48b114475a183c119ccc
-- 0x5db49dec4e6008c2bb4d0919fad3f7dfcf50258d13873664c5aaec0ac5253755
-- 0x4786ea044adb93085e028224bb543737080b7e02103254c48b6432fee994713d
-- 0x4e393579966a6e3cd52c6a67950684159cf5b16d978d711c7cd24eec4afa66d3
-- 0x66877f62be8909e933fd855b468336e609898957f74aebb6d32a7ba22df398e4
-- 0x63da64d430baba0de72914cb506ec0ed6c2b8bbd63b27fea3d80f9272be251e4
+- 0x79481dea49fa1a8af7c3dc7c3c60ba32141b9c1e300181ddffb9e002f92fc020
+- 0xe512b252ee0cd0ffb0c7253ab79650152ddf84cd5618986711bf824477edc62b
+- 0x692ee0e15db869a365e345baf24faab5cb6faf8719b328f5a52ccd490aa92826
+- 0x75f441601bca0f2c2e5ecdcb3b4a2a38e8924b32674d21c8c32e22f15e9bc3a6
+- 0xdb29b102bf42c303a93d9935dbc55f5145b5a5911a96a16474c0387db26a27db
+- 0x6d10c4b0ac44fefe8186cf7481166984807113180bf01383f10b6c225b9d9b61
+- 0x761df520169b22ecd8ab19831338ee7090b47187884f80445bd1b455beb339f3
+- Reverted
+
+Estimated Gas: 
+Actual Gas: 
 
 # Smart Contract
 Contract: 

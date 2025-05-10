@@ -17,7 +17,11 @@ async function main(): Promise<void> {
 
 		// Get accounts
 		const [deployer, owner2, owner3]: SignerWithAddress[] = await ethers.getSigners();
-		console.log("Deploying contract with the account:", deployer.address);
+		const deployerAddress: string = await deployer.getAddress();
+		const owner2Address: string = await owner2.getAddress();
+		const owner3Address: string = await owner3.getAddress();
+
+		console.log("Deploying contract with the account:", deployerAddress);
 
 		// Deploy VRFConsumer contract
 		const VRFConsumerFactory: ContractFactory = await ethers.getContractFactory('VRFConsumer');
@@ -46,7 +50,7 @@ async function main(): Promise<void> {
 
 		// Deploy Treasury contract
 		const TreasuryFactory: ContractFactory = await ethers.getContractFactory('Treasury');
-		const owners: string[] = [deployer.address, owner2.address, owner3.address];
+		const owners: string[] = [deployerAddress, owner2Address, owner3Address];
 		const requiredSignatures: number = 2;
 		const treasury: Treasury = (await TreasuryFactory.deploy(
 			vrfConsumerAddress,
