@@ -26,7 +26,7 @@ contract Dealer {
 		address	player;
 		uint256	bet;
 		uint256	requestId;
-		uint256 usedCards; // Bitmap to track used cards (1-52)
+		uint64 usedCards; // Bitmap to track used cards (1-52)
 		uint8[]	playerCards;
 		uint8[]	dealerCards;
 		uint8	playerScore;
@@ -114,19 +114,19 @@ contract Dealer {
 		game.dealerCards = new uint8[](1);
 		card = getUniqueCard(randomness, game.usedCards);
 		game.playerCards[0] = card;
-		game.usedCards |= (uint256(1) << (card - 1));
+		game.usedCards |= (uint64(1) << (card - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		randomness = uint256(keccak256(abi.encode(randomness, 1)));
 		card = getUniqueCard(randomness, game.usedCards);
 		game.playerCards[1] = card;
-		game.usedCards |= (uint256(1) << (card - 1));
+		game.usedCards |= (uint64(1) << (card - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		randomness = uint256(keccak256(abi.encode(randomness, 2)));
 		card = getUniqueCard(randomness, game.usedCards);
 		game.dealerCards[0] = card;
-		game.usedCards |= (uint256(1) << (card - 1));
+		game.usedCards |= (uint64(1) << (card - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, card);
 
 		game.playerScore = calculateScore(game.playerCards);
@@ -174,7 +174,7 @@ contract Dealer {
 
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
-		game.usedCards |= (uint256(1) << (newCard - 1));
+		game.usedCards |= (uint64(1) << (newCard - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 
 		game.playerScore = calculateScore(game.playerCards);
@@ -243,7 +243,7 @@ contract Dealer {
 		
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
-		game.usedCards |= (uint256(1) << (newCard - 1));
+		game.usedCards |= (uint64(1) << (newCard - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.playerScore = calculateScore(game.playerCards);
 
@@ -270,7 +270,7 @@ contract Dealer {
 
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.dealerCards.push(newCard);
-		game.usedCards |= (uint256(1) << (newCard - 1));
+		game.usedCards |= (uint64(1) << (newCard - 1));
 		// game.usedCards = markCardAsUsed(game.usedCards, newCard);
 		game.dealerScore = calculateScore(game.dealerCards);
 
@@ -479,14 +479,14 @@ contract Dealer {
 	 * @param usedCardsBitmap Bitmap of used cards
 	 * @return A unique card value between 1-52
 	 */
-	function getUniqueCard(uint256 randomness, uint256 usedCardsBitmap) internal pure returns (uint8) {
+	function getUniqueCard(uint256 randomness, uint64 usedCardsBitmap) internal pure returns (uint8) {
 		// Maximum attempts to find an unused card
 		uint8 maxAttempts = 52;
-		
+
 		for (uint8 i = 0; i < maxAttempts; i++) {
 			// Generate a card between 1-52
 			uint8 card = uint8((randomness % 52) + 1);
-			
+
 			// Check if the card is unused
 			if (!isCardUsed(usedCardsBitmap, card)) {
 				return card;
@@ -507,12 +507,12 @@ contract Dealer {
 	 * @param card The card value to check (1-52)
 	 * @return Whether the card has been used
 	 */
-	function isCardUsed(uint256 usedCardsBitmap, uint8 card) internal pure returns (bool) {
+	function isCardUsed(uint64 usedCardsBitmap, uint8 card) internal pure returns (bool) {
 		// Cards are 1-52, but bitmap is 0-based, so subtract 1
-		uint256 bitPosition = uint256(card) - 1;
+		uint64 bitPosition = uint64(card) - 1;
 		
 		// Check if the bit is set
-		return (usedCardsBitmap & (uint256(1) << bitPosition)) != 0;
+		return (usedCardsBitmap & (uint64(1) << bitPosition)) != 0;
 	}
 	
 	/**
@@ -520,11 +520,11 @@ contract Dealer {
 	 * @param usedCardsBitmap Bitmap of used cards
 	 * @param card The card value to mark (1-52)
 	 */
-	function markCardAsUsed(uint256 usedCardsBitmap, uint8 card) internal pure returns(uint256) {
+	function markCardAsUsed(uint64 usedCardsBitmap, uint8 card) internal pure returns(uint64) {
 		// Cards are 1-52, but bitmap is 0-based, so subtract 1
-		uint256 bitPosition = uint256(card) - 1;
+		uint64 bitPosition = uint64(card) - 1;
 		
 		// Set the bit
-		return usedCardsBitmap | (uint256(1) << bitPosition);
+		return usedCardsBitmap | (uint64(1) << bitPosition);
 	}
 }

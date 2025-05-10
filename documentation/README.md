@@ -44,21 +44,23 @@ Explain the choices you had to make and the reasons why you made these choices.
 - npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
 
 Deploying contract with the account: 0xD1CF396C69b77110C562fc257Ac4b3E458037cB2
-vrfConsumer deployed at: 0xD36928dfc7196f6e07f46382ff668B58f1E6C2cA
+vrfConsumer deployed at: 0xbAF70C4f7C0Ce4D13efB82743E0Aa2780e1c5B80
 vrfConsumer's coordinator address: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
-Tokenizer deployed at: 0xf8AC3544c7A31b5eB3f596A3a46bB6eD9bC15cA4
-Treasury deployed at: 0xaae34b924efd9c3800ef366e64a07109448681dd
+Tokenizer deployed at: 0x4DfFf400ca6cd6f38286baa1cF8CbD6e139d8715
+Treasury deployed at: 0xF7ce95980a7CdC2ECcec0Fe7E9Fd449dB16bB323
 Granted MINTER_ROLE to Treasury
 Granted BURNER_ROLE to Treasury
 Added Tokenizer's vrfConsumer as a VRF consumer.
+Dealer deployed at: 0xD6ed3723ebe7Cc9d965F8346B00119BCcB233Ba0
 
 Tx Hashes:
-- 0x6f24a9bf6465f619f26ff3b501f9363a14fa8486917e394093def8cc2b76dea0
-- 0x891064a39e8ffbc73af18c50f50c1efaa22453eb35c6dc92cb658900abc52d18
-- 0x5dd141054b6780becf1cdc89654462aa6e18acc2df167b62efd67b12f4b6f94b
-- 0x2fe3761d5c476ae0f3464a3ecb9b88ecd9d2e453cf342e9d35d122694dac3b16
-- 0x2ff89742e4a600552f36d1ee2021f4b0aedb8142205a99124f2ba46219d4c629
-- 0x0cecf632f225e82921a0880928a809aa5ca4fb89436010a8d682ce75c86779f5
+- 0x0700c20f90aee68009439c227b9c78289811c6211fac9c3e2b929b1765c6141a
+- 0x1c3c3c275500a87b5ccb359fbbf209b359805f5cea8c48b114475a183c119ccc
+- 0x5db49dec4e6008c2bb4d0919fad3f7dfcf50258d13873664c5aaec0ac5253755
+- 0x4786ea044adb93085e028224bb543737080b7e02103254c48b6432fee994713d
+- 0x4e393579966a6e3cd52c6a67950684159cf5b16d978d711c7cd24eec4afa66d3
+- 0x66877f62be8909e933fd855b468336e609898957f74aebb6d32a7ba22df398e4
+- 0x63da64d430baba0de72914cb506ec0ed6c2b8bbd63b27fea3d80f9272be251e4
 
 # Smart Contract
 Contract: 

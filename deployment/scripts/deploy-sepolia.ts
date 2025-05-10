@@ -1,6 +1,6 @@
 import { ContractFactory } from "ethers";
 import { ethers } from "hardhat";
-import { Tokenizer, Treasury, VRFConsumer } from "../typechain-types";
+import { Tokenizer, Treasury, VRFConsumer, Dealer } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 async function main(): Promise<void> {
@@ -56,10 +56,10 @@ async function main(): Promise<void> {
 		)) as Treasury;
 		await treasury.waitForDeployment();
 
-		// Grant MINTER_ROLE and BURNER_ROLE to Treasury
 		const treasuryAddress: string = await treasury.getAddress();
 		console.log('Treasury deployed at:', treasuryAddress);
-
+		
+		// Grant MINTER_ROLE and BURNER_ROLE to Treasury
 		const MINTER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("MINTER_ROLE"));
 		const BURNER_ROLE: string = ethers.keccak256(ethers.toUtf8Bytes("BURNER_ROLE"));
 
@@ -69,10 +69,25 @@ async function main(): Promise<void> {
 		await tokenizer.grantRole(BURNER_ROLE, treasuryAddress);
 		console.log("Granted BURNER_ROLE to Treasury");
 
-		// Add Tokenizer as a VRF consumer
+		// Add VRF as a consumer
 		const VRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5", VRF_COORDINATOR_ADDRESS);
 		await VRFCoordinator.addConsumer(subscriptionId, vrfConsumerAddress);
 		console.log("Added Tokenizer\'s vrfConsumer as a VRF consumer.");
+
+		// Deploy Dealer contract
+		const DealerFactory: ContractFactory = await ethers.getContractFactory('Dealer');
+		const dealer: Dealer = (await DealerFactory.deploy(
+			vrfConsumerAddress,
+			tokenizerAddress,
+			treasuryAddress,
+			ethers.parseEther("500"),
+			ethers.parseEther("500000"),
+			250
+		)) as Dealer;
+		await dealer.waitForDeployment();
+
+		const dealerAddress: string = await dealer.getAddress();
+		console.log('Dealer deployed at:', dealerAddress);
 
 	} catch (error) {
 		console.error("Deployment failed:", error);
