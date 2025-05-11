@@ -49,7 +49,7 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 		uint256 initialSupply,
 		address _vrfConsumer
 	)
-	ERC20("Fiorino42", "FI") {
+	ERC20("42FIORINO", "FLOR") {
 		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		_mint(_msgSender(), initialSupply);
 		lastRandomEvent = block.timestamp;

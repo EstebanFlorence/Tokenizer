@@ -6,19 +6,18 @@
 // await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 // await ethers.provider.send("evm_mine");
 
-
 async function getSigners() {
 	/* Get signers */
 	[deployer, owner2, owner3, user1] = await ethers.getSigners();
+	return(deployer, owner2, owner3, user1);
 }
-
 
 async function getContracts(isLocalhost) {
 	/* Get Deployed Contract Instance */
 	if (isLocalhost) {
 		tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 	} else {
-		tokenizerAddress = "0xC1510A0839eCbA01a057b2D5447F8e64E88A2b35";
+		tokenizerAddress = "0x79fa86D2F598AF9473e120B3c3441458417A05D8";
 	}
 	tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
 	
@@ -31,14 +30,14 @@ async function getContracts(isLocalhost) {
 	if (isLocalhost) {
 		treasuryAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 	} else {
-		treasuryAddress = "0xA7a0134a5aC5324621259062178652Fc0927530c";
+		treasuryAddress = "0x6E098f1490a68a55D3f32e22a826dF9CB5fAd1c4";
 	}
 	treasury = await ethers.getContractAt("Treasury", treasuryAddress);
 	
 	if (isLocalhost) {
 		dealerAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
 	} else {
-		dealerAddress = "0x6d79ae1789eD18a276b7bAFb12Ecf5E2878bCDa6";
+		dealerAddress = "0x021F426B093B7343FBEAc6DDccf7f1F043bd6379";
 	}
 	dealer = await ethers.getContractAt("Dealer", dealerAddress);
 
@@ -56,7 +55,6 @@ async function getBalances() {
 	console.log("Tokens Total Supply:\t" , ethers.formatEther(await tokenizer.totalSupply()));
 }
 
-
 async function testRoles() {
 	/* Check roles */
 	DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -67,13 +65,13 @@ async function testRoles() {
 	await tokenizer.hasRole(MINTER_ROLE, treasury.target);
 	await tokenizer.hasRole(BURNER_ROLE, treasury.target);
 	await tokenizer.hasRole(PAUSER_ROLE, deployer.address);
-	
+
 	/* Grant role */
 	await tokenizer.grantRole((await tokenizer.DEFAULT_ADMIN_ROLE()), deployer.address);
 	await tokenizer.grantRole((await tokenizer.MINTER_ROLE()), deployer.address);
 	await tokenizer.grantRole((await tokenizer.BURNER_ROLE()), deployer.address);
 	await tokenizer.grantRole((await tokenizer.PAUSER_ROLE()), deployer.address);
-	
+
 	/* Revoke role */
 	await tokenizer.revokeRole((await tokenizer.DEFAULT_ADMIN_ROLE()), deployer.address);
 	await tokenizer.revokeRole((await tokenizer.MINTER_ROLE()), deployer.address);
@@ -81,68 +79,65 @@ async function testRoles() {
 	await tokenizer.revokeRole((await tokenizer.PAUSER_ROLE()), deployer.address);
 }
 
-
 async function testPause() {
 	/* Pause the contract (requires PAUSER_ROLE) */
 	await tokenizer.pause();
 	
 	/* Unpause the contract (requires PAUSER_ROLE) */
 	await tokenizer.unpause();
-	
-	
+
 	/* Mint tokens (requires MINTER_ROLE) */
 	await tokenizer.mint(user1.address, ethers.parseEther("100"));
 	await treasury.proposeMint(dealerAddress, ethers.parseEther("42000"));
-	
+	await getProposalId();
+
 	/* Burn tokens (requires BURNER_ROLE) */
 	await tokenizer.burn(user1.address, ethers.parseEther("50"));
 	await treasury.proposeBurn(user1.address, burnAmount);
+	await getProposalId();
 }
 
+async function getProposalId() {
+	// Get the transaction submission events
+	filter = treasury.filters.TransactionSubmitted();
+	events = await treasury.queryFilter(filter);
+	proposalId = events[events.length - 1].args[0];
+	return proposalId;
+}
 
 async function testMultisig() {
 	/* Approve Multisig transactions */
-	await treasury.approveTransaction(0);
-	await treasury.connect(owner2).approveTransaction(0);
+	await treasury.approveTransaction(proposalId);
+	await treasury.connect(owner2).approveTransaction(proposalId);
 	// ...
 	
 	/* Execute Multisig transactions */
-	await treasury.executeTransaction(0);
+	await treasury.executeTransaction(proposalId);
 }
 
-
-async function testRequest() {
-	/* Request randomness */
+async function testRequest(isLocalhost) {
 	tx = await vrfConsumer.requestRandomness();
 	receipt = await tx.wait();
-	
 	filter = vrfConsumer.filters.RandomnessRequested();
 	events = await vrfConsumer.queryFilter(filter);
 	requestId = events[events.length - 1].args[0]
-	await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-		requestId,
-		vrfConsumerAddress,
-		[Math.floor(Math.random() * 2n ** 256n)]
-	);
-	randomness = await vrfConsumer.getRandomness(requestId);
+	if (isLocalhost) {
+		await getMockRandomness();
+	}
+	return(randomness = await vrfConsumer.getRandomness(requestId));
 }
 
-
-async function testTrigger() {
-	/* Trigger a random event */
+async function testTrigger(isLocalhost) {
 	tx = await treasury.triggerRandomEvent();
 	receipt = await tx.wait();
 	filter = treasury.filters.RandomEventTriggered();
 	events = await treasury.queryFilter(filter);
 	requestId = events[events.length - 1].args.requestId;
-	await mockVRFCoordinator.fulfillRandomWordsWithOverride(
-		requestId,
-		vrfConsumerAddress,
-		[Math.floor(Math.random() * 2n ** 256n)]
-	);
+	if (isLocalhost) {
+		await getMockRandomness();
+	}
 	await treasury.handleRandomness(requestId);
 }
-
 
 async function sendEthToOwners() {
 	/* Send ETH */
@@ -157,7 +152,6 @@ async function sendEthToOwners() {
 	});
 
 }
-
 
 async function getArtifact() {
 	/* Get contract interface */
@@ -200,9 +194,10 @@ async function getRandomness(isLocalhost) {
 
 
 async function approveDealer() {
-	await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
-	await tx.wait();
-	console.log(allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress())));
+	tx = await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
+	receipt = await tx.wait();
+	allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
+	return allowance;
 }
 
 async function startGame(isLocalhost) {
@@ -304,8 +299,8 @@ async function playLocal() {
 	await testRoles();
 	await testPause();
 	await testMultisig();
-	await testRequest();
-	await testTrigger();
+	await testRequest(true);
+	await testTrigger(true);
 	
 	/* Utils */
 	await getArtifact();
@@ -339,8 +334,8 @@ async function playSepolia() {
 	await testRoles();
 	await testPause();
 	await testMultisig();
-	await testRequest();
-	await testTrigger();
+	await testRequest(false);
+	await testTrigger(false);
 
 	/* Utils */
 	await getArtifact();
@@ -348,7 +343,7 @@ async function playSepolia() {
 	await getAction();
 	await getCardRequest();
 	await getBalances();
-	isFulfilled = await vrfConsumer.isRandomnessFullfilled(requestId);
+	await vrfConsumer.isRandomnessFullfilled(requestId);
 
 	/* Blackjack */
 	await approveDealer();

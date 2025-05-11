@@ -74,7 +74,7 @@ contract Dealer {
 	}
 
 	modifier onlyRandomnessReady(uint256 gameId) {
-		require(vrfConsumer.isRandomnessFullfilled(games[gameId].requestId), "Randomness not ready or non existent");
+		require(vrfConsumer.isRandomnessFullfilled(games[gameId].requestId), "Randomness not available");
 		_;
 	}
 
@@ -91,7 +91,6 @@ contract Dealer {
 		game.player = msg.sender;
 		game.bet = bet;
 		game.requestId = requestId;
-		// game.usedCards = 0;
 		game.state = GameStates.WAITING_FOR_BET;
 		game.result = GameResults.IN_PROGRESS;
 		game.isActive = true;
@@ -407,7 +406,6 @@ contract Dealer {
 			aceCount--;
 		}
 
-
 		// guaranteed to fit in uint8 for any realistic hand
 		return uint8(rawScore);
 	}
@@ -492,16 +490,16 @@ contract Dealer {
 			if (!isCardUsed(usedCardsBitmap, card)) {
 				return card;
 			}
-			
+
 			// Try a different card
 			randomness = uint256(keccak256(abi.encode(randomness, i)));
 		}
-		
+
 		// Fallback if somehow all cards are marked as used (shouldn't happen in normal play)
 		// In a real implementation, we might want to handle this differently
 		revert("All cards used - deck exhausted");
 	}
-	
+
 	/**
 	 * @notice Check if a card has been used
 	 * @param usedCardsBitmap Bitmap of used cards
