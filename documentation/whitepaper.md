@@ -36,11 +36,11 @@ Additionally, many blockchain gaming platforms suffer from:
 42FIORINO is an ERC20 token that serves as the primary medium of exchange within the ecosystem:
 
 - **Token Standard**: ERC20
-- **Token Symbol**: FLOR
+- **Token Symbol**: FLOR(ENTIA)
 - **Role-Based Access Control**: Minting, burning, and pausing capabilities controlled by specific roles
 - **Supply Management**: 
 	- Managed through the Treasury's multi-signature system
-	- Trying your luck triggering a random event and calling handleRandomness
+	- Dynamic supply adjustments through VRF-powered random economic events
 
 ### 3.2 Token Utility
 
@@ -154,12 +154,14 @@ graph TD
 	A -->|Interacts with| C[Dealer Contract]
 	B -->|Manages| D[Funds and Token Supply]
 	C -->|Requests| E[VRFConsumer Contract]
+	B -->|Requests| E
 	E -->|Provides| C
+	E -->|Provides| B
 	C -->|Handles| F[Player Bets and Payouts]
 	F -->|Transfers| B
 ```
 
-This diagram illustrates the interaction between the core smart contracts in the 42FIORINO ecosystem. The Tokenizer contract serves as the ERC20 token implementation, interacting with both the Treasury and Dealer contracts. The Treasury contract manages funds and token supply, while the Dealer contract handles player bets and payouts. The VRFConsumer contract ensures secure randomness for the Dealer contract, maintaining fairness in gameplay.
+This diagram illustrates the interaction between the core smart contracts in the 42FIORINO ecosystem. The Tokenizer contract serves as the ERC20 token implementation, interacting with both the Treasury and Dealer contracts. The Treasury contract manages funds and token supply, while the Dealer contract handles player bets and payouts. Both Treasury and Dealer contracts request verifiable randomness from the VRFConsumer contract. The VRFConsumer contract ensures secure randomness for both the Treasury (for random events) and Dealer contracts (for card games), maintaining fairness throughout the ecosystem.
 
 ### 9.2 Contract Interactions
 
@@ -192,13 +194,13 @@ This diagram illustrates the interaction between the core smart contracts in the
 - **Language**: Solidity 0.8.6+
 - **Libraries**: OpenZeppelin Contracts (Access Control, ERC20, Pausable)
 - **External Dependencies**: Chainlink VRF for secure randomness
-- **Testing Framework**: Hardhat, Foundry
+- **Testing Framework**: Hardhat
 
 ### 9.5 Deployed Contracts
 
 | Contract    | Network | Address                                    |
 |-------------|---------|--------------------------------------------|
-| Tokenizer   | Sepolia | 0x0000000000000000000000000000000000000000 |
-| Treasury    | Sepolia | 0x0000000000000000000000000000000000000000 |
-| Dealer      | Sepolia | 0x0000000000000000000000000000000000000000 |
-| VRFConsumer | Sepolia | 0x0000000000000000000000000000000000000000 |
+| Tokenizer   | Sepolia | 0x79fa86D2F598AF9473e120B3c3441458417A05D8 |
+| Treasury    | Sepolia | 0x6E098f1490a68a55D3f32e22a826dF9CB5fAd1c4 |
+| Dealer      | Sepolia | 0x021F426B093B7343FBEAc6DDccf7f1F043bd6379 |
+| VRFConsumer | Sepolia | 0xcd1f78b04a843A0cC6D042EAB30B2e8BF16Ff126 |

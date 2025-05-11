@@ -1,6 +1,6 @@
 # Tokenizer
 
-A blockchain-based tokenization platform that leverages Chainlink VRF for verifiable randomness in token generation and distribution.
+A blockchain-based project that leverages Chainlink VRF for verifiable randomness in token generation and distribution.
 
 ## Overview
 
