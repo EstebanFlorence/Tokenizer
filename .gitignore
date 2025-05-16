@@ -3,7 +3,7 @@ cache
 node_modules
 dist
 typechain-types
-.secrets.json
 .env
+.verify.env
 TODO.md
 **/.DS_Store

@@ -5,15 +5,15 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 async function main(): Promise<void> {
 	try {
-		const { VRF_COORDINATOR_ADDRESS, VRF_KEY_HASH, SUBSCRIPTION_ID } = process.env;
+		const { VRF_COORDINATOR_ADDRESS, VRF_KEY_HASH, VRF_SUBSCRIPTION_ID } = process.env;
 
-		if (!VRF_COORDINATOR_ADDRESS || !VRF_KEY_HASH || !SUBSCRIPTION_ID) {
+		if (!VRF_COORDINATOR_ADDRESS || !VRF_KEY_HASH || !VRF_SUBSCRIPTION_ID) {
 			throw new Error(
-				"Missing required environment variables: VRF_COORDINATOR_ADDRESS, VRF_KEY_HASH, or SUBSCRIPTION_ID."
+				"Missing required environment variables: VRF_COORDINATOR_ADDRESS, VRF_KEY_HASH, or VRF_SUBSCRIPTION_ID."
 			);
 		}
 
-		const subscriptionId: bigint = BigInt(SUBSCRIPTION_ID);
+		const subscriptionId: bigint = BigInt(VRF_SUBSCRIPTION_ID);
 
 		// Get accounts
 		const [deployer, owner2, owner3]: SignerWithAddress[] = await ethers.getSigners();

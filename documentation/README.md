@@ -53,6 +53,8 @@ npm install @chainlink/contracts --save
 npm install --save-dev @nomicfoundation/hardhat-toolbox
 npm install --save-dev @openzeppelin/test-helpers
 npm install --save-dev @nomicfoundation/hardhat-toolbox dotenv
+npm install --save-dev @nomicfoundation/hardhat-verify
+npm install --save-dev @nomicfoundation/hardhat-etherscan
 
 # Initialize Hardhat
 npx hardhat init  # Choose empty hardhat.config.js
@@ -77,6 +79,10 @@ npx hardhat console --network localhost
 # Run test suite
 npx hardhat test --typecheck --network localhost
 ```
+
+### Verifying
+
+
 
 ## Deployment Information
 

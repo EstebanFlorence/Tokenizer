@@ -8,7 +8,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const { API_URL, PRIVATE_KEY, OWNER2_PRIVATE_KEY, OWNER3_PRIVATE_KEY } = process.env;
+const { ALCHEMY_API_KEY, SEPOLIA_PRIVATE_KEY1, SEPOLIA_PRIVATE_KEY2, SEPOLIA_PRIVATE_KEY3, ETHERSCAN_API_KEY } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 const config: HardhatUserConfig = {
@@ -53,19 +53,24 @@ const config: HardhatUserConfig = {
 			chainId: 31337,
 		},
 		sepolia: {
-			url: "https://eth-sepolia.g.alchemy.com/v2/" + API_URL,
+			url: "https://eth-sepolia.g.alchemy.com/v2/" + ALCHEMY_API_KEY,
 			accounts: [
-				`0x${PRIVATE_KEY}`,
-				`0x${OWNER2_PRIVATE_KEY}`,
-				`0x${OWNER3_PRIVATE_KEY}`
+				`0x${SEPOLIA_PRIVATE_KEY1}`,
+				`0x${SEPOLIA_PRIVATE_KEY2}`,
+				`0x${SEPOLIA_PRIVATE_KEY3}`
 			]
 		}
 	},
+	etherscan: {
+		apiKey: {
+		  sepolia: ETHERSCAN_API_KEY || "",
+		},
+	  },
 	gasReporter: {
 		enabled: true,
 		currency: "USD",
 		// coinmarketcap: "YOUR_COINMARKETCAP_API_KEY", // Optional for real-time gas price
-		}
+	}
 };
 
 export default config;
