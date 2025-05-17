@@ -200,7 +200,7 @@ This diagram illustrates the interaction between the core smart contracts in the
 
 | Contract    | Network | Address                                    |
 |-------------|---------|--------------------------------------------|
-| Tokenizer   | Sepolia | 0x79fa86D2F598AF9473e120B3c3441458417A05D8 |
-| Treasury    | Sepolia | 0x6E098f1490a68a55D3f32e22a826dF9CB5fAd1c4 |
-| Dealer      | Sepolia | 0x021F426B093B7343FBEAc6DDccf7f1F043bd6379 |
-| VRFConsumer | Sepolia | 0xcd1f78b04a843A0cC6D042EAB30B2e8BF16Ff126 |
+| Tokenizer   | Sepolia | 0x942aA9C62487e4EB3cb0630432f06C24b292C17B |
+| Treasury    | Sepolia | 0xA195190A45aFa15936AeA372024C94A873654A1e |
+| Dealer      | Sepolia | 0xb4B6711200C9AD7acC882BDcDf3bb81DA18362Bd |
+| VRFConsumer | Sepolia | 0x418e025340Db0C5783caF3Da6ED37882eeD9df44 |

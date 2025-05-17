@@ -10,6 +10,14 @@ contract MultisigWallet {
 	mapping(uint256 => mapping(address => bool)) public approvals;
 	uint256 public transactionCount;
 
+	/**
+	 * @dev Struct to represent a transaction within the MultisigWallet contract.
+	 * 
+	 * @param to The address of the recipient to whom the transaction is intended.
+	 * @param value The amount of Ether (in wei) to be transferred in the transaction.
+	 * @param data The data payload of the transaction, used to encode function calls or other data.
+	 * @param executed A boolean indicating whether the transaction has been executed or not.
+	 */
 	struct Transaction {
 		address to;
 		uint256 value;

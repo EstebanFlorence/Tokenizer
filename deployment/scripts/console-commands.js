@@ -25,27 +25,31 @@ async function getContracts(isLocalhost) {
 	if (isLocalhost) {
 		tokenizerAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 	} else {
-		tokenizerAddress = "0x79fa86D2F598AF9473e120B3c3441458417A05D8";
+		tokenizerAddress = "0x942aA9C62487e4EB3cb0630432f06C24b292C17B";
 	}
 	tokenizer = await ethers.getContractAt("Tokenizer", tokenizerAddress);
-	
-	vrfConsumerAddress = await tokenizer.vrfConsumer();
+
+	if (isLocalhost) {
+		vrfConsumerAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
+	} else {
+		vrfConsumerAddress = "0x418e025340Db0C5783caF3Da6ED37882eeD9df44";
+	}
 	vrfConsumer = await ethers.getContractAt("VRFConsumer", vrfConsumerAddress);
-	
+
 	vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();
 	mockVRFCoordinator = await ethers.getContractAt("VRFCoordinatorV2_5Mock", vrfCoordinatorAddress);
-	
+
 	if (isLocalhost) {
 		treasuryAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
 	} else {
-		treasuryAddress = "0x6E098f1490a68a55D3f32e22a826dF9CB5fAd1c4";
+		treasuryAddress = "0xA195190A45aFa15936AeA372024C94A873654A1e";
 	}
 	treasury = await ethers.getContractAt("Treasury", treasuryAddress);
 	
 	if (isLocalhost) {
 		dealerAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
 	} else {
-		dealerAddress = "0x021F426B093B7343FBEAc6DDccf7f1F043bd6379";
+		dealerAddress = "0xb4B6711200C9AD7acC882BDcDf3bb81DA18362Bd";
 	}
 	dealer = await ethers.getContractAt("Dealer", dealerAddress);
 
@@ -119,7 +123,7 @@ async function testMultisig() {
 	await treasury.approveTransaction(proposalId);
 	await treasury.connect(owner2).approveTransaction(proposalId);
 	// ...
-	
+
 	/* Execute Multisig transactions */
 	await treasury.executeTransaction(proposalId);
 }
@@ -206,7 +210,7 @@ async function getRandomness(isLocalhost) {
 
 
 async function approveDealer() {
-	tx = await tokenizer.approve(dealerAddress, ethers.parseEther("100000"));
+	tx = await tokenizer.approve(dealerAddress, ethers.parseEther("10000"));
 	receipt = await tx.wait();
 	allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
 	return allowance;

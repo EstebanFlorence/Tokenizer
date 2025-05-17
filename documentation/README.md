@@ -120,11 +120,11 @@ npx hardhat verify --network sepolia \
 ### Latest Deployment
 
 - **Deployer Address**: `0xD1CF396C69b77110C562fc257Ac4b3E458037cB2`
-- **VRFConsumer**: `0xcd1f78b04a843A0cC6D042EAB30B2e8BF16Ff126`
+- **VRFConsumer**: `0x418e025340Db0C5783caF3Da6ED37882eeD9df44`
 - **VRF Coordinator**: `0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B`
-- **Tokenizer**: `0x79fa86D2F598AF9473e120B3c3441458417A05D8`
-- **Treasury**: `0x6E098f1490a68a55D3f32e22a826dF9CB5fAd1c4`
-- **Dealer**: `0x021F426B093B7343FBEAc6DDccf7f1F043bd6379`
+- **Tokenizer**: `0x942aA9C62487e4EB3cb0630432f06C24b292C17B`
+- **Treasury**: `0xA195190A45aFa15936AeA372024C94A873654A1e`
+- **Dealer**: `0xb4B6711200C9AD7acC882BDcDf3bb81DA18362Bd`
 
 ### Multisig Owners
 - Owner 1: `0xD1CF396C69b77110C562fc257Ac4b3E458037cB2` (Deployer)
@@ -141,8 +141,8 @@ npx hardhat verify --network sepolia \
 - Dealer deployment: `0x043374f183c579dc8437f7cc51745978ac8be10a541162ebed769ad69777812b`
 
 ### Gas Cost
-- Total estimated gas: 6496361n
-- Total estimated gas cost: 0.007597054853598292 ETH
+- Total estimated gas: 6389053n
+- Total estimated gas cost: 0.007470441122967306 ETH
 - Total gas: 
 - Total gas cost:  ETH
 

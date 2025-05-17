@@ -32,6 +32,11 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 		keyHash = _keyHash;
 	}
 
+	/**
+	 * @notice Requests randomness from Chainlink VRF
+	 * @dev Each address can only have one request in progress at a time
+	 * @return requestId The ID of the randomness request
+	 */
 	function requestRandomness() external returns (uint256 requestId) {
 		requestId = s_vrfCoordinator.requestRandomWords(
 			VRFV2PlusClient.RandomWordsRequest({
@@ -52,6 +57,11 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 		emit RandomnessRequested(requestId, msg.sender);
 	}
 
+	/**
+	 * @notice Callback function used by VRF Coordinator to deliver randomness
+	 * @param requestId The ID of the randomness request
+	 * @param randomWords The random result returned by the VRF Coordinator
+	 */
 	function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
 		uint256 randomness = randomWords[0];
 
@@ -60,6 +70,12 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 		emit RandomnessFulfilled(requestId, randomness);
 	}
 
+	/**
+	 * @notice Gets the randomness result for the caller
+	 * @dev Caller must be the original requester
+	 * @param requestId The ID of the randomness request
+	 * @return The random value
+	 */
 	function getRandomness(uint256 requestId) external view returns (uint256) {
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
@@ -74,10 +90,16 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 		return randomness != 0 && randomness != RANDOMNESS_IN_PROGRESS;
 	}
 
+	/**
+	 * @notice Clears randomness request data for an address
+	 * @dev Can only be called by the original requester
+	 * @param requestId The ID of the request to clear
+	 */
 	function clearRandomRequest(uint256 requestId) external {
 		require(msg.sender == requestIdToSender[requestId], "Caller is not the requester");
 
 		delete requestIdToSender[requestId];
 		delete senderToRandomness[msg.sender];
 	}
+
 }

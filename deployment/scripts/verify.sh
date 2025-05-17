@@ -9,7 +9,6 @@ npx hardhat verify --network sepolia \
 npx hardhat verify --network sepolia \
   $TOKENIZER_ADDRESS \
   $INITIAL_SUPPLY \
-  $VRF_CONSUMER_ADDRESS
 
 # 3. Treasury
 npx hardhat verify \
@@ -23,6 +22,6 @@ npx hardhat verify --network sepolia \
   $VRF_CONSUMER_ADDRESS \
   $TOKENIZER_ADDRESS \
   $TREASURY_ADDRESS \
-  500 \
-  500000 \
-  250
+  $MIN_BET \
+  $MAX_BET \
+  $HOUSE_EDGE
