@@ -6,10 +6,12 @@
 // await ethers.provider.send("evm_increaseTime", [24 * 60 * 60]);
 // await ethers.provider.send("evm_mine");
 
-// Get the current block number
-const latestBlock = await ethers.provider.getBlockNumber();
-// Query only the last 500 blocks
-const fromBlock = Math.max(0, latestBlock - 499);
+async function updateBlocks() {
+	// Get the current block number
+	latestBlock = await ethers.provider.getBlockNumber();
+	// Query only the last 500 blocks
+	fromBlock = Math.max(0, latestBlock - 499);
+}
 
 
 async function getSigners() {
@@ -106,6 +108,7 @@ async function testPause() {
 async function getProposalId() {
 	// Get the transaction submission events
 	filter = treasury.filters.TransactionSubmitted();
+	await updateBlocks();
 	events = await treasury.queryFilter(filter, fromBlock, latestBlock);
 	proposalId = events[events.length - 1].args[0];
 	return proposalId;
@@ -125,6 +128,7 @@ async function testRequest(isLocalhost) {
 	tx = await vrfConsumer.requestRandomness();
 	receipt = await tx.wait();
 	filter = vrfConsumer.filters.RandomnessRequested();
+	await updateBlocks();
 	events = await vrfConsumer.queryFilter(filter, fromBlock, latestBlock);
 	requestId = events[events.length - 1].args[0]
 	if (isLocalhost) {
@@ -137,6 +141,7 @@ async function testTrigger(isLocalhost) {
 	tx = await treasury.triggerRandomEvent();
 	receipt = await tx.wait();
 	filter = treasury.filters.RandomEventTriggered();
+	await updateBlocks();
 	events = await treasury.queryFilter(filter, fromBlock, latestBlock);
 	requestId = events[events.length - 1].args.requestId;
 	if (isLocalhost) {
@@ -190,8 +195,9 @@ async function getMockRandomness() {
 
 async function getRandomness(isLocalhost) {
 	randomFilter = vrfConsumer.filters.RandomnessRequested();
+	await updateBlocks();
 	randomEvents = await vrfConsumer.queryFilter(randomFilter, fromBlock, latestBlock);
-	requestId = randomEvents[randomEvents.length - 1].args[0]
+	requestId = await randomEvents[randomEvents.length - 1].args[0]
 
 	if (isLocalhost) {
 		await getMockRandomness();
@@ -213,9 +219,10 @@ async function startGame(isLocalhost) {
 	await getRandomness(isLocalhost);
 
 	gameFilter = dealer.filters.GameCreated();
+	await updateBlocks();
 	gameEvents = await dealer.queryFilter(gameFilter, fromBlock, latestBlock);
 	gameId = gameEvents[gameEvents.length - 1].args[0];
-	
+
 	console.log("Game ID: ", gameId);
 	console.log(await dealer.getGameState(gameId));
 }
@@ -230,18 +237,21 @@ async function dealInitialCards() {
 
 async function getAction() {
 	actionFilter = dealer.filters.PlayerAction();
+	await updateBlocks();
 	actionEvents = await dealer.queryFilter(actionFilter, fromBlock, latestBlock);
 	action = actionEvents[actionEvents.length - 1].args[1];
 }
 
 async function getCardRequest() {
 	cardRequestFilter = dealer.filters.CardRequested();
+	await updateBlocks();
 	cardRequestEvents = await dealer.queryFilter(cardRequestFilter, fromBlock, latestBlock);
 	cardRequestId = cardRequestEvents[cardRequestEvents.length - 1].args[1];
 }
 
 async function getCardDealt(toPlayer, isStart) {
 	cardDealtFilter = dealer.filters.CardDealt();
+	await updateBlocks();
 	cardDealtEvents = await dealer.queryFilter(cardDealtFilter, fromBlock, latestBlock);
 	if (isStart) {
 		playerCards = [

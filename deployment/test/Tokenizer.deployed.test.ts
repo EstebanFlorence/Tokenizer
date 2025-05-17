@@ -20,6 +20,7 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 		user1: SignerWithAddress;
 	const tokenizerAddress: string = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
 	const treasuryAddress: string = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+	const vrfConsumerAddress: string = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 
 	before(async function () {
 
@@ -27,8 +28,6 @@ describe("Tokenizer (Using Deployed Contract)", function () {
 
 		// Get contract instances
 		tokenizer = Tokenizer__factory.connect(tokenizerAddress, owner);
-
-		const vrfConsumerAddress = await tokenizer.vrfConsumer();
 		vrfConsumer = VRFConsumer__factory.connect(vrfConsumerAddress, owner);
 
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();

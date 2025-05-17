@@ -40,8 +40,7 @@ async function main(): Promise<void> {
 		const initialSupply: bigint = ethers.parseEther("1000000");
 		const TokenizerFactory: ContractFactory = await ethers.getContractFactory('Tokenizer');
 		const tokenizer: Tokenizer = (await TokenizerFactory.deploy(
-			initialSupply,
-			vrfConsumerAddress
+			initialSupply
 		)) as Tokenizer;
 		await tokenizer.waitForDeployment();
 

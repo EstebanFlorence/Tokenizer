@@ -24,7 +24,7 @@ contract Dealer {
 		address	player;
 		uint256	bet;
 		uint256	requestId;
-		uint64 usedCards; // Bitmap to track used cards (1-52)
+		uint64	usedCards; // Bitmap to track used cards (1-52)
 		uint8[]	playerCards;
 		uint8[]	dealerCards;
 		uint8	playerScore;

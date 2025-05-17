@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { Log, LogDescription } from "ethers";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
-	Tokenizer__factory, Tokenizer,
 	VRFConsumer__factory, VRFConsumer,
 	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
 } from "../typechain-types";
@@ -11,20 +10,16 @@ import {
 describe("VRFConsumer (Using Deployed Contract)", function () {
 	let vrfConsumer: VRFConsumer;
 	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
-	let tokenizer: Tokenizer;
 	let owner: SignerWithAddress,
 		user1: SignerWithAddress;
 
-	const tokenizerAddress: string = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+	const vrfConsumerAddress: string = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 
 	before(async function () {
 
 		[owner, user1] = await ethers.getSigners();
 
 		// Get contract instances
-		tokenizer = Tokenizer__factory.connect(tokenizerAddress, owner);
-
-		const vrfConsumerAddress = await tokenizer.vrfConsumer();
 		vrfConsumer = VRFConsumer__factory.connect(vrfConsumerAddress, owner);
 
 		const vrfCoordinatorAddress = await vrfConsumer.s_vrfCoordinator();

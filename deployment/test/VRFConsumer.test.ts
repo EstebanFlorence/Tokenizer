@@ -2,10 +2,8 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import {
-	Tokenizer__factory, Tokenizer,
 	VRFConsumer__factory, VRFConsumer,
 	VRFCoordinatorV2_5Mock__factory, VRFCoordinatorV2_5Mock,
-	Treasury__factory, Treasury
 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { Log, LogDescription } from "ethers";
@@ -13,14 +11,13 @@ import { Log, LogDescription } from "ethers";
 describe("VRFConsumer", function () {
 	let vrfConsumer: VRFConsumer;
 	let mockVRFCoordinator: VRFCoordinatorV2_5Mock;
-	let treasury: Treasury;
 	let owner: SignerWithAddress,
 		user1: SignerWithAddress,
 		user2: SignerWithAddress;
 
 	const keyHash: string = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
 
-	async function deployTokenizerFixture() {
+	async function deployVRFConsumerFixture() {
 
 		[owner, user1, user2] = await ethers.getSigners();
 
@@ -68,7 +65,7 @@ describe("VRFConsumer", function () {
 
 	describe("fulfillRandomWords", function () {
 		it("Should request randomness and emit event", async function () {
-			const { vrfConsumer, owner } = await loadFixture(deployTokenizerFixture);
+			const { vrfConsumer, owner } = await loadFixture(deployVRFConsumerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -95,7 +92,7 @@ describe("VRFConsumer", function () {
 
 	describe("getRandomness", function () {
 		it("Should return the correct randomness for the requester", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
+			const { vrfConsumer } = await loadFixture(deployVRFConsumerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -126,7 +123,7 @@ describe("VRFConsumer", function () {
 		});
 
 		it("Should revert if called by non-requester", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
+			const { vrfConsumer } = await loadFixture(deployVRFConsumerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 
@@ -158,7 +155,7 @@ describe("VRFConsumer", function () {
 
 	describe("clearRandomRequest", function () {
 		it("Should clear the request data", async function () {
-			const { vrfConsumer } = await loadFixture(deployTokenizerFixture);
+			const { vrfConsumer } = await loadFixture(deployVRFConsumerFixture);
 			const tx = await vrfConsumer.requestRandomness();
 			const receipt = await tx.wait();
 

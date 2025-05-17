@@ -61,8 +61,7 @@ describe("Tokenizer", function () {
 
 		// Deploy Tokenizer
 		tokenizer = await new Tokenizer__factory(owner).deploy(
-			initialSupply,
-			await vrfConsumer.getAddress()
+			initialSupply
 		);
 
 		// Deploy Treasury

@@ -39,7 +39,7 @@ export async function estimateGasCosts(
 
 	// Estimate gas for Tokenizer deployment
 	const tokenizerGas = await deployer.estimateGas(
-		await TokenizerFactory.getDeployTransaction(initialSupply, vrfCoordinatorAddress)
+		await TokenizerFactory.getDeployTransaction(initialSupply)
 	);
 	console.log("Estimated gas for Tokenizer deployment:", tokenizerGas.toString());
 

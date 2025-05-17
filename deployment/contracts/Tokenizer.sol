@@ -17,13 +17,6 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 	bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 	bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-	IVRFConsumer public	vrfConsumer;
-
-	uint256 public	lastRandomEvent;
-	uint256 public	randomInterval = 1 days;
-
-	mapping(uint256 => address)	requestIdToAddress;
-
 	event Received(address sender, uint256 amount);
 	event FallbackCalled(address sender, uint256 amount, bytes data);
 
@@ -45,15 +38,9 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 		emit Received(msg.sender, msg.value);
 	}
 
-	constructor(
-		uint256 initialSupply,
-		address _vrfConsumer
-	)
+	constructor(uint256 initialSupply)
 	ERC20("42FIORINO", "FLOR") {
-		vrfConsumer = IVRFConsumer(_vrfConsumer);
 		_mint(_msgSender(), initialSupply);
-		lastRandomEvent = block.timestamp;
-
 		_grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
 		_grantRole(PAUSER_ROLE, _msgSender());
 	}
@@ -77,7 +64,5 @@ contract Tokenizer is ERC20, Pausable, AccessControl {
 	function setPauser(address pauser) external onlyRole(DEFAULT_ADMIN_ROLE) {
 		_grantRole(PAUSER_ROLE, pauser);
 	}
-
-
 
 }
