@@ -3,7 +3,6 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "hardhat-gas-reporter";
-// import "@nomiclabs/hardhat-etherscan";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -32,15 +31,15 @@ const config: HardhatUserConfig = {
 					}
 				}
 			},
-			{
-				version: "0.8.6",
-				settings: {
-					optimizer: {
-						enabled: true,
-						runs:200
-					}
-				}
-			}
+			// {
+			// 	version: "0.8.6",
+			// 	settings: {
+			// 		optimizer: {
+			// 			enabled: true,
+			// 			runs:200
+			// 		}
+			// 	}
+			// }
 		]
 	},
 	// defaultNetwork: "sepolia",

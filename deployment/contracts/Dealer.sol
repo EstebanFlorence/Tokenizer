@@ -145,7 +145,7 @@ contract Dealer {
 	 */
 	function hit(uint256 gameId) external onlyActiveGame(gameId) {
 		Game storage game = games[gameId];
-		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not your turn");
+		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
 
 		emit PlayerAction(msg.sender, PlayerActions.HIT);
 
@@ -161,7 +161,7 @@ contract Dealer {
 	 */
 	function dealHitCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId) {
 		Game storage game = games[gameId];
-		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player action");
+		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player randomness");
 		address player = game.player;
 
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
@@ -188,7 +188,7 @@ contract Dealer {
 			game.result = GameResults.PLAYER_WIN;
 			completeGame(gameId);
 		}
-		
+
 	}
 
 	/**
@@ -196,27 +196,27 @@ contract Dealer {
 	 */
 	function stand(uint256 gameId) external onlyActiveGame(gameId) {
 		Game storage game = games[gameId];
-		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not your turn");
-		
+		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
+
 		emit PlayerAction(msg.sender, PlayerActions.STAND);
-		
+
 		// Complete the game (dealer's turn)
 		startDealerTurn(gameId);
 	}
-	
+
 	/**
 	 * @notice Player action: double down (double bet and receive one more card)
 	 */
 	function doubleDown(uint256 gameId) external onlyActiveGame(gameId) {
 		Game storage game = games[gameId];
-		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not your turn");
+		require(game.state == GameStates.WAITING_FOR_PLAYER_ACTION, "Not waiting for player action");
 		require(game.playerCards.length == 2, "Can only double down on initial hand");
 		require(tokenizer.transferFrom(msg.sender, address(this), game.bet), "Token transfer failed");
-		
+
 		game.bet *= 2;
-		
+
 		emit PlayerAction(msg.sender, PlayerActions.DOUBLE_DOWN);
-		
+
 		uint256 requestId = vrfConsumer.requestRandomness();
 		game.requestId = requestId;
 		game.state = GameStates.WAITING_FOR_PLAYER_RANDOMNESS;
@@ -231,10 +231,10 @@ contract Dealer {
 		Game storage game = games[gameId];
 		address player = game.player;
 
-		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player action");
-		
+		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player randomness");
+
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
-		
+
 		uint8 newCard = getUniqueCard(randomness, game.usedCards);
 		game.playerCards.push(newCard);
 		game.usedCards |= (uint64(1) << (newCard - 1));
@@ -254,7 +254,7 @@ contract Dealer {
 			game.playerHasBlackjack = true;
 			game.result = GameResults.PLAYER_WIN;
 		}
-		
+
 		completeGame(gameId);
 	}
 
@@ -352,7 +352,8 @@ contract Dealer {
 			tokenizer.transfer(player, payout);
 		} else if (game.result == GameResults.DEALER_WIN) {
 			// Transfer the entire bet to the treasury
-			tokenizer.transfer(address(treasury), game.bet);
+			uint256 treasuryShare = game.bet / 10;
+			tokenizer.transfer(address(treasury), treasuryShare);
 		}
 
 		// Update game state
@@ -496,7 +497,6 @@ contract Dealer {
 		}
 
 		// Fallback if somehow all cards are marked as used (shouldn't happen in normal play)
-		// In a real implementation, we might want to handle this differently
 		revert("All cards used - deck exhausted");
 	}
 
@@ -509,7 +509,7 @@ contract Dealer {
 	function isCardUsed(uint64 usedCardsBitmap, uint8 card) internal pure returns (bool) {
 		// Cards are 1-52, but bitmap is 0-based, so subtract 1
 		uint64 bitPosition = uint64(card) - 1;
-		
+
 		// Check if the bit is set
 		return (usedCardsBitmap & (uint64(1) << bitPosition)) != 0;
 	}

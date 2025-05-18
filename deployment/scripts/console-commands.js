@@ -45,7 +45,7 @@ async function getContracts(isLocalhost) {
 		treasuryAddress = "0xA195190A45aFa15936AeA372024C94A873654A1e";
 	}
 	treasury = await ethers.getContractAt("Treasury", treasuryAddress);
-	
+
 	if (isLocalhost) {
 		dealerAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
 	} else {
@@ -94,18 +94,24 @@ async function testRoles() {
 async function testPause() {
 	/* Pause the contract (requires PAUSER_ROLE) */
 	await tokenizer.pause();
-	
+	await tx.wait();
+
 	/* Unpause the contract (requires PAUSER_ROLE) */
 	await tokenizer.unpause();
+	await tx.wait();
 
 	/* Mint tokens (requires MINTER_ROLE) */
 	await tokenizer.mint(user1.address, ethers.parseEther("100"));
+	await tx.wait();
 	await treasury.proposeMint(dealerAddress, ethers.parseEther("42000"));
+	await tx.wait();
 	await getProposalId();
 
 	/* Burn tokens (requires BURNER_ROLE) */
 	await tokenizer.burn(user1.address, ethers.parseEther("50"));
+	await tx.wait();
 	await treasury.proposeBurn(user1.address, burnAmount);
+	await tx.wait();
 	await getProposalId();
 }
 
@@ -118,19 +124,22 @@ async function getProposalId() {
 	return proposalId;
 }
 
-async function testMultisig() {
+async function approveMultisigTx() {
 	/* Approve Multisig transactions */
 	await treasury.approveTransaction(proposalId);
+	await tx.wait();
 	await treasury.connect(owner2).approveTransaction(proposalId);
+	await tx.wait();
 	// ...
 
 	/* Execute Multisig transactions */
 	await treasury.executeTransaction(proposalId);
+	await tx.wait();
 }
 
 async function testRequest(isLocalhost) {
 	tx = await vrfConsumer.requestRandomness();
-	receipt = await tx.wait();
+	await tx.wait();
 	filter = vrfConsumer.filters.RandomnessRequested();
 	await updateBlocks();
 	events = await vrfConsumer.queryFilter(filter, fromBlock, latestBlock);
@@ -143,7 +152,7 @@ async function testRequest(isLocalhost) {
 
 async function testTrigger(isLocalhost) {
 	tx = await treasury.triggerRandomEvent();
-	receipt = await tx.wait();
+	await tx.wait();
 	filter = treasury.filters.RandomEventTriggered();
 	await updateBlocks();
 	events = await treasury.queryFilter(filter, fromBlock, latestBlock);
@@ -160,7 +169,7 @@ async function sendEthToOwners() {
 		to: owner2.address,
 		value: ethers.parseEther("0.1")
 	});
-	
+
 	await deployer.sendTransaction({
 		to: owner3.address,
 		value: ethers.parseEther("0.1")
@@ -173,6 +182,15 @@ async function getArtifact() {
 	dealerArtifact = JSON.parse(fs.readFileSync("artifacts/contracts/Dealer.sol/Dealer.json", 'utf8'));
 	iface = new ethers.Interface(dealerArtifact.abi);
 }
+
+// async function checkForFulfillmentEvent(requestId) {
+// 	const filter = vrfConsumer.filters.RandomnessFulfilled();
+// 	await updateBlocks();
+// 	const events = await vrfConsumer.queryFilter(filter, fromBlock, latestBlock);
+
+// 	// Find the event with matching requestId
+// 	return events.some(event => event.args.requestId === requestId);
+// }
 
 
 /* Blackjack */
@@ -211,14 +229,14 @@ async function getRandomness(isLocalhost) {
 
 async function approveDealer() {
 	tx = await tokenizer.approve(dealerAddress, ethers.parseEther("10000"));
-	receipt = await tx.wait();
+	await tx.wait();
 	allowance = ethers.formatEther(await tokenizer.allowance(deployer.getAddress(), dealer.getAddress()));
 	return allowance;
 }
 
 async function startGame(isLocalhost) {
 	tx = await dealer.startGame(ethers.parseEther("1000"));
-	receipt = await tx.wait();
+	await tx.wait();
 
 	await getRandomness(isLocalhost);
 
@@ -233,7 +251,7 @@ async function startGame(isLocalhost) {
 
 async function dealInitialCards() {
 	tx = await dealer.dealInitialCards(gameId);
-	receipt = await tx.wait();
+	await tx.wait();
 
 	await getCardDealt(false, true);
 }
@@ -316,13 +334,14 @@ async function playLocal() {
 	/* Start */
 	await getSigners();
 	await getContracts(true);
+
 	/* Test */
 	await testRoles();
 	await testPause();
-	await testMultisig();
+	await approveMultisigTx();
 	await testRequest(true);
 	await testTrigger(true);
-	
+
 	/* Utils */
 	await getArtifact();
 	await sendEthToOwners();
@@ -351,10 +370,11 @@ async function playSepolia() {
 	/* Start */
 	await getSigners();
 	await getContracts(false);
+
 	/* Test */
 	await testRoles();
 	await testPause();
-	await testMultisig();
+	await approveMultisigTx();
 	await testRequest(false);
 	await testTrigger(false);
 
