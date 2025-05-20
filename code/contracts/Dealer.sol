@@ -14,7 +14,7 @@ contract Dealer {
 	enum GameStates { 
 		WAITING_FOR_BET, GAME_COMPLETED, 
 		WAITING_FOR_PLAYER_ACTION, WAITING_FOR_DEALER_ACTION, 
-		WAITING_FOR_PLAYER_RANDOMNESS, WAITING_FOR_DEALER_RANDOMNESS
+		WAITING_FOR_PLAYER_RANDOMNESS, WAITING_FOR_DOUBLE_DOWN_RANDOMNESS
 	}
 	enum PlayerActions { HIT, STAND, DOUBLE_DOWN }
 	enum GameResults { IN_PROGRESS, PLAYER_WIN, DEALER_WIN, PUSH }
@@ -219,7 +219,7 @@ contract Dealer {
 
 		uint256 requestId = vrfConsumer.requestRandomness();
 		game.requestId = requestId;
-		game.state = GameStates.WAITING_FOR_PLAYER_RANDOMNESS;
+		game.state = GameStates.WAITING_FOR_DOUBLE_DOWN_RANDOMNESS;
 
 		emit CardRequested(requestId, msg.sender);
 	}
@@ -231,7 +231,7 @@ contract Dealer {
 		Game storage game = games[gameId];
 		address player = game.player;
 
-		require(game.state == GameStates.WAITING_FOR_PLAYER_RANDOMNESS, "Not waiting for player randomness");
+		require(game.state == GameStates.WAITING_FOR_DOUBLE_DOWN_RANDOMNESS, "Not waiting for player randomness");
 
 		uint256 randomness = vrfConsumer.getRandomness(game.requestId);
 
