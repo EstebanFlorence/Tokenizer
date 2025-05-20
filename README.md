@@ -1,8 +1,14 @@
-# Tokenizer
+<h1 align="center">
+  Tokenizer
+</h1>
 
-<img src="deployment/assets/42FIORINO.png" alt="42FLORENTIA" width="300" />
+<div align="center">
+  <img src="deployment/assets/42FIORINO.png" alt="42FLORENTIA" width="550" />
+</div>
 
-A blockchain-based project that leverages Chainlink VRF for verifiable randomness in token generation and distribution.
+<p align="center">
+  A blockchain-based project that leverages Chainlink VRF for verifiable randomness in token generation and distribution.
+</p>
 
 ## Overview
 
