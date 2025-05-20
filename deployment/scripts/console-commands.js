@@ -219,7 +219,7 @@ async function getRandomness(isLocalhost) {
 	randomFilter = vrfConsumer.filters.RandomnessRequested();
 	await updateBlocks();
 	randomEvents = await vrfConsumer.queryFilter(randomFilter, fromBlock, latestBlock);
-	requestId = await randomEvents[randomEvents.length - 1].args[0]
+	console.log(requestId = await randomEvents[randomEvents.length - 1].args[0]);
 
 	if (isLocalhost) {
 		await getMockRandomness();
@@ -384,6 +384,7 @@ async function playSepolia() {
 	await getAction();
 	await getCardRequest();
 	await getBalances();
+	await dealer.getGameState(gameId);
 	await vrfConsumer.isRandomnessFullfilled(requestId);
 
 	/* Blackjack */

@@ -4,6 +4,19 @@
 
 The Tokenizer project is a blockchain system that leverages Chainlink VRF (Verifiable Random Function) to generate tokens with verifiably random characteristics. This document outlines the implementation details, setup procedures, and design choices.
 
+```mermaid
+graph TD
+	A[Tokenizer Contract] -->|Interacts with| B[Treasury Contract]
+	A -->|Interacts with| C[Dealer Contract]
+	B -->|Manages| D[Funds and Token Supply]
+	C -->|Requests| E[VRFConsumer Contract]
+	B -->|Requests| E
+	E -->|Provides| C
+	E -->|Provides| B
+	C -->|Handles| F[Player Bets and Payouts]
+	F -->|Transfers| B
+```
+
 ## Design Choices
 
 This section explains the key design decisions and architectural choices made during development.
