@@ -166,7 +166,7 @@ The Dealer contract implements a blackjack card game with betting functionality.
 
 ### Enums
 
-- `GameStates`: WAITING_FOR_BET, GAME_COMPLETED, WAITING_FOR_PLAYER_ACTION, WAITING_FOR_DEALER_ACTION, WAITING_FOR_PLAYER_RANDOMNESS, WAITING_FOR_DEALER_RANDOMNESS
+- `GameStates`: WAITING_FOR_BET, GAME_COMPLETED, WAITING_FOR_PLAYER_ACTION, WAITING_FOR_DEALER_ACTION, WAITING_FOR_PLAYER_RANDOMNESS, WAITING_FOR_DOUBLE_DOWN_RANDOMNESS
 - `PlayerActions`: HIT, STAND, DOUBLE_DOWN
 - `GameResults`: IN_PROGRESS, PLAYER_WIN, DEALER_WIN, PUSH
 
@@ -211,7 +211,6 @@ function dealInitialCards(uint256 gameId) external onlyActiveGame(gameId) onlyRa
 
 Deals the initial cards for a game.
 
-- `gameId`: The ID of the game
 
 #### Player Actions
 
@@ -221,7 +220,6 @@ function hit(uint256 gameId) external onlyActiveGame(gameId)
 
 The player requests another card.
 
-- `gameId`: The ID of the game
 
 ```solidity
 function dealHitCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId)
@@ -229,7 +227,6 @@ function dealHitCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomn
 
 Deals a card after a hit request.
 
-- `gameId`: The ID of the game
 
 ```solidity
 function stand(uint256 gameId) external onlyActiveGame(gameId)
@@ -237,7 +234,6 @@ function stand(uint256 gameId) external onlyActiveGame(gameId)
 
 The player chooses to stand.
 
-- `gameId`: The ID of the game
 
 ```solidity
 function doubleDown(uint256 gameId) external onlyActiveGame(gameId)
@@ -245,7 +241,6 @@ function doubleDown(uint256 gameId) external onlyActiveGame(gameId)
 
 The player chooses to double down, doubling their bet and receiving one more card.
 
-- `gameId`: The ID of the game
 
 ```solidity
 function dealDoubleDownCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId)
@@ -253,7 +248,6 @@ function dealDoubleDownCard(uint256 gameId) external onlyActiveGame(gameId) only
 
 Deals a card after a double down request.
 
-- `gameId`: The ID of the game
 
 ```solidity
 function dealDealerCard(uint256 gameId) external onlyActiveGame(gameId) onlyRandomnessReady(gameId)
@@ -261,7 +255,6 @@ function dealDealerCard(uint256 gameId) external onlyActiveGame(gameId) onlyRand
 
 Deals a card to the dealer.
 
-- `gameId`: The ID of the game
 
 #### Configuration
 
@@ -299,7 +292,6 @@ function getGameState(uint256 gameId) external view returns (uint8[] memory card
 
 Gets the current state of a game.
 
-- `gameId`: The ID of the game
 - Returns: The player's cards, dealer's cards, scores, game state, and result
 
 ## VRFConsumer Contract

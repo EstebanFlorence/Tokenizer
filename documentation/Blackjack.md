@@ -23,8 +23,8 @@ The game uses **Chainlink VRF** (Verifiable Random Function) for fair card deali
 | `WAITING_FOR_BET` | Initial state after game creation |
 | `WAITING_FOR_PLAYER_ACTION` | Player's turn to make a move |
 | `WAITING_FOR_PLAYER_RANDOMNESS` | Waiting for randomness after player action |
+| `WAITING_FOR_DOUBLE_DOWN_RANDOMNESS` | Waiting for randomness for double down's card |
 | `WAITING_FOR_DEALER_ACTION` | Dealer's turn |
-| `WAITING_FOR_DEALER_RANDOMNESS` | Waiting for randomness for dealer's card |
 | `GAME_COMPLETED` | Game has ended |
 
 ### Player Actions
