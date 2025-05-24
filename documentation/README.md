@@ -1,5 +1,5 @@
 <h1 align="center">
-  Tokenizer - Technical Documentation
+  Technical Documentation
 </h1>
 
 <div align="center">
