@@ -1,4 +1,10 @@
-# Tokenizer - Technical Documentation
+<h1 align="center">
+  Tokenizer - Technical Documentation
+</h1>
+
+<div align="center">
+  <img src="../deployment/assets/42BACCO.png" alt="42BACCO" width="550" />
+</div>
 
 ## Project Overview
 
