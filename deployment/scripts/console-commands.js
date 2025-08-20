@@ -327,6 +327,7 @@ async function dealDealerCard() {
 	tx = await dealer.dealDealerCard(gameId);
 	receipt = await tx.wait();
 	await getCardDealt(false, false);
+	await getRandomness(isLocalhost);
 }
 
 
@@ -401,5 +402,4 @@ async function playSepolia() {
 	await stand(false);
 
 	await dealDealerCard();
-	await getRandomness(false);
 }
